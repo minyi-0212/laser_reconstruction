@@ -89,8 +89,7 @@ void coor_system::pixel_to_world(const vector<Point2f>& p_pixel, vector<Point3f>
 		in_homogeneous.at<double>(3, 0) = 1;
 		out_homogeneous = RT.inv() * cameraMatrix.inv() * in_homogeneous;
 		direction = out_homogeneous - cam_pos;
-		//t = (z-cam_pos.at<double>(2, 0)) / direction.at<double>(2, 0);			//!!!!!!!!
-		t = (z - cam_pos.at<double>(1, 0)) / direction.at<double>(1, 0);
+		t = (z-cam_pos.at<double>(2, 0)) / direction.at<double>(2, 0);
 		out_homogeneous = cam_pos + t * direction;
 		p_world[i].x = out_homogeneous.at<double>(0, 0);
 		p_world[i].y = out_homogeneous.at<double>(1, 0);

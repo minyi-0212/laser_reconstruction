@@ -9,6 +9,8 @@ using namespace std;
 using namespace cv;
 #define M_PI 3.14159265358979323846
 
+extern void check_laser_plane(const vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate);
+
 // compute the section of [laser plane] and [the camera_pos->pixel line]
 // so the origin of line is (0,0,0), the distance frome the origin to the plane is d(plane is ax+by+cz+d=0).
 void compute_plane_line_section(const vector<double>& plane, const vector <Point3f>& line_dir, vector<Point3f>& section_point)
@@ -57,8 +59,9 @@ void find_the_max_point_of_each_line(const Mat& image, vector<Point2f>& laser_li
 				max_point.y = j;
 			}
 		}
-		if (max_val != 0)
+		if (max_val >= 120)
 			laser_line.push_back(max_point);
+
 		/*for (int i = 0; i < image.cols; i++)
 		{
 			if (image.at<Vec3b>(j, i)[1] > 0)
@@ -101,6 +104,11 @@ void rotate(const Point3f& axis, double angle, vector<Point3f>& points)
 }
 
 //#define OUTPUT_PLY
+//#define cam_coord_ply
+//#define real_world_coordinate
+//#define laser_plane
+//#define laser_plane_compute
+//#define checkboard
 void reconstruct_test(const char* filepath, const Mat& camera_matrix, const Mat& RT, const float rotate_angle)
 {
 	coor_system coordinate(camera_matrix);
@@ -292,7 +300,7 @@ void reconstruct_test(const char* filepath, const Mat& camera_matrix, const Mat&
 	}
 }
 
-//#define FIND_LASER
+#define FIND_LASER
 void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat& RT,
 	const vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate)
 {
@@ -303,19 +311,165 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		pos, normal, color;
 
 #ifdef OUTPUT_PLY
+	//check_laser_plane(laser_plane_in_camera, coordinate);
+
 	// add coordinate
+	vector<Point3f> tmp_axis;
 	{
-		pos.push_back(Point3f(0, 0, 0));
-		color.push_back(Point3f(0, 0, 0));
+		float axis_size = 1;
+		double axis_value;
+		tmp_axis.push_back(Point3f(0, 0, 0));
 		for (int i = 1; i < 100; i++)
 		{
-			pos.push_back(Point3f(i, 0, 0));
-			color.push_back(Point3f(1, 0, 0));
-			pos.push_back(Point3f(0, i, 0));
-			color.push_back(Point3f(0, 1, 0));
-			pos.push_back(Point3f(0, 0, i));
-			color.push_back(Point3f(0, 0, 1));
+			axis_value = i * axis_size;
+			tmp_axis.push_back(Point3f(axis_value, 0, 0));
+			tmp_axis.push_back(Point3f(0, axis_value, 0));
+			tmp_axis.push_back(Point3f(0, 0, axis_value));
 		}
+
+#ifdef cam_coord_ply
+		// add coordinate
+		{
+			pos.push_back(Point3f(0, 0, 0));
+			color.push_back(Point3f(0, 0, 0));
+			for (int i = 1; i < 100; i++)
+			{
+				axis_value = i * axis_size;
+				pos.push_back(Point3f(axis_value, 0, 0));
+				color.push_back(Point3f(1, 0, 0));
+				pos.push_back(Point3f(0, axis_value, 0));
+				color.push_back(Point3f(0, 1, 0));
+				pos.push_back(Point3f(0, 0, axis_value));
+				color.push_back(Point3f(0, 0, 1));
+			}
+		}
+		export_pointcloud_ply("./output_virtual/camera_coord_big.ply", pos, normal, color);
+		return;
+#endif
+#ifdef checkboard
+		// add checkboard
+		axis_size = 1;
+		{
+			vector<Point3f> tmp;
+			for (int j = 0; j < 7; j++)
+				for (int i = 0; i < 5; i++)
+				{
+					tmp.push_back(Point3f(i, j, 0));
+				}
+			vector<Point3f> pos_world;
+			coordinate[0].world_to_camera(tmp, pos_world);
+			for (int i = 0; i < pos_world.size(); i++)
+			{
+				pos.push_back(pos_world[i]);
+				color.push_back(Point3f(1, 1, 0));
+			}
+
+			coordinate[0].world_to_camera(tmp_axis, pos_world);
+			pos.push_back(pos_world[0]);
+			color.push_back(Point3f(0, 0, 0));
+			for (int i = 0; i < 99; i++)
+			{
+				pos.push_back(pos_world[i * 3 + 1]);
+				color.push_back(Point3f(0.5, 0, 0));
+				pos.push_back(pos_world[i * 3 + 2]);
+				color.push_back(Point3f(0, 0.5, 0));
+				pos.push_back(pos_world[i * 3 + 3]);
+				color.push_back(Point3f(0, 0, 0.5));
+			}
+		}
+
+		export_pointcloud_ply("./output_virtual/checkboard-pic1.ply", pos, normal, color);
+		return;
+#endif
+
+#ifdef real_world_coordinate
+		// add real_world_coordinate
+		{
+			vector<Point3f> pos_world;
+			coor_system real_coordinate(camera_matrix);
+			real_coordinate.set_RT_matrix(RT);
+			real_coordinate.world_to_camera(tmp_axis, pos_world);
+			for (int i = 0; i < 99; i++)
+			{
+				//cout << pos[i] << "	->	" << pos_camera[i] << endl;
+				pos.push_back(pos_world[i * 3 + 1]);
+				color.push_back(Point3f(1, 0, 0));
+				pos.push_back(pos_world[i * 3 + 2]);
+				color.push_back(Point3f(0, 1, 0));
+				pos.push_back(pos_world[i * 3 + 3]);
+				color.push_back(Point3f(0, 0, 1));
+			}
+		}
+		export_pointcloud_ply("./output_virtual/real_world_coord.ply", pos, normal, color);
+		return;
+#endif
+
+#ifdef laser_plane
+		// add laser plane
+		{
+			vector<Point3f> laser_point_in_camera;
+			for (double i = -10; i <= 10; i += 1)
+			{
+				for (double j = -100; j <= 100; j += 1)
+				{
+					laser_point_in_camera.push_back(Point3f(i,
+						-(laser_plane_in_camera[0] * i + laser_plane_in_camera[2] * j
+							+ laser_plane_in_camera[3]) / laser_plane_in_camera[1], j));
+				}
+			}
+			/*for (int j = 0; j < laser_point_in_camera.size(); j++)
+			{
+				pos.push_back(laser_point_in_camera[j]);
+				color.push_back(Point3f(0, 1, 1));
+			}*/
+			vector<Point3f> pos_world;
+			coor_system real_coordinate(camera_matrix);
+			real_coordinate.set_RT_matrix(RT);
+			real_coordinate.world_to_camera(laser_point_in_camera, pos_world);
+			for (int j = 0; j < pos_world.size(); j++)
+			{
+				pos.push_back(pos_world[j]);
+				color.push_back(Point3f(0, 1, 1));
+			}
+
+			cout << laser_point_in_camera.size() << endl;
+			vector<Point3d> pos_world_double;
+			for (auto p : pos_world)
+				pos_world_double.push_back(p);
+			Ransac ransac_laser(pos_world_double);
+			vector<double> plane;
+			plane = ransac_laser.fitPlane();
+			cout << "plane in cam: " << endl;
+			for (auto val : plane)
+				cout << val << ",";
+			cout << endl;
+		}
+		export_pointcloud_ply("./output_virtual/laser_plane.ply", pos, normal, color);
+		return;
+#endif
+
+#ifdef laser_plane_compute
+		// add laser plane
+		{
+			vector<Point3f> laser_point_in_camera;
+			for (double i = -10; i <= 10; i += 1)
+			{
+				for (double j = -100; j <= 100; j += 1)
+				{
+					laser_point_in_camera.push_back(Point3f(i,
+						-(laser_plane_in_camera[0] * i + laser_plane_in_camera[2] * j
+							+ laser_plane_in_camera[3]) / laser_plane_in_camera[1], j));
+				}
+			}
+			for (int j = 0; j < laser_point_in_camera.size(); j++)
+			{
+				pos.push_back(laser_point_in_camera[j]);
+				color.push_back(Point3f(1, 0, 1));
+			}
+		}
+		export_pointcloud_ply("./output_virtual/laser_plane_compute.ply", pos, normal, color);
+		return;
+#endif
 	}
 #endif
 
@@ -323,37 +477,10 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	{
 #ifdef OUTPUT_PLY
 		{
-			// add laser plane
-			{
-				vector<Point3f> laser_point_in_camera;
-				for (double i = -10; i <= 10; i += 1)
-				{
-					for (double j = -100; j <= 100; j += 1)
-					{
-						laser_point_in_camera.push_back(Point3f(i,
-							-(laser_plane_in_camera[0] * i + laser_plane_in_camera[2] * j
-								+ laser_plane_in_camera[3]) / laser_plane_in_camera[1], j));
-					}
-				}
-				for (int j = 0; j < laser_point_in_camera.size(); j++)
-				{
-					pos.push_back(laser_point_in_camera[j]);
-					color.push_back(Point3f(0, 1, 1));
-				}
-			}
-
 			// add axis
 			{
-				vector<Point3f> tmp;
-				tmp.push_back(Point3f(0, 0, 0));
-				for (int i = 1; i < 100; i++)
-				{
-					tmp.push_back(Point3f(i, 0, 0));
-					tmp.push_back(Point3f(0, i, 0));
-					tmp.push_back(Point3f(0, 0, i));
-				}
 				vector<Point3f> pos_world;
-				coordinate[i].world_to_camera(tmp, pos_world);
+				coordinate[i].world_to_camera(tmp_axis, pos_world);
 				cout << "the pos of world origin (0,0,0) in camera = " << pos_world[0] << endl;
 				pos.push_back(pos_world[0]);
 				color.push_back(Point3f(0, 0, 0));
@@ -372,7 +499,8 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		}
 #endif
 
-		sprintf_s(file, "%s/ball_%03d.png", filepath, 0);
+		//sprintf_s(file, "%s/ball_%03d.png", filepath, 0);
+		sprintf_s(file, "%s/test_%03d.png", filepath, i);
 		image = imread(file);
 #ifdef FIND_LASER
 		image_show = image.clone();
@@ -405,5 +533,5 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 			//color.push_back(Point3f(1, 1, 1));
 		}
 	}
-	export_pointcloud_ply("./output_virtual/reconstruction_test1.ply", pos, normal, color);
+	export_pointcloud_ply("./output_virtual/reconstruction_test2.ply", pos, normal, color);
 }

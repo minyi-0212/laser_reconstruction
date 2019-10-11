@@ -41,9 +41,10 @@ extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const 
 	const Mat& cameraMatrix, const Mat& distCoeffs,
 	std::vector<double>& laser_plane_in_camera, std::vector<coor_system>& coordinate);
 
+
 //#define COMPUTE_LASER_PLANE
 int main(int argc, char *argv[]) {
-	/*rename_file("../virtual_checkboard", "test_");
+	/*rename_file("../virtual_checkboard2", "test_");
 	system("pause");
 	return 0;*/
 
@@ -164,7 +165,8 @@ int main(int argc, char *argv[]) {
 			cout << a << " ";
 		}
 		cout << endl;
-		//laser_plane_in_camera = std::vector<double>{ 1.4701,-0.243289,-0.172101,0.119937 };
+		//laser_plane_in_camera = std::vector<double>{ 0.980, 0.195, -0.040, 0 };
+		//laser_plane_in_camera = std::vector<double>{ -112.973, -10.135, -13.4221, -154.237 };
 		cout << "the plane: " << endl;
 		for (auto a : laser_plane_in_camera)
 		{
@@ -172,7 +174,7 @@ int main(int argc, char *argv[]) {
 		}
 		cout << endl;
 		cout << "-------------------------------------------" << endl;
-		reconstruct_test2("../virtual_ball", camera_matrix, RT, laser_plane_in_camera, coordinate);
+		reconstruct_test2("../virtual_cube", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
 #endif

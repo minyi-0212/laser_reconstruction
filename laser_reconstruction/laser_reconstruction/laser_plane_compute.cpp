@@ -389,7 +389,7 @@ void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& ma
 				maxj = j;
 			}
 		}
-		if (val >= 150)
+		if (val >= 200)
 		{
 			laser.push_back(Point2f(maxj, i));
 		}
@@ -397,6 +397,11 @@ void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& ma
 #endif
 
 	Vec4f line;
+	if (laser.size() <= 2)
+	{
+		cout << "laser line cannot find." << endl;
+		return;
+	}
 	fitLine(laser, line, CV_DIST_L2, 0, 0.01, 0.01);
 	double k = line[1] / line[0],
 		b = line[3] - k * line[2];
@@ -445,6 +450,100 @@ void plane_section(const vector<double>& a, const vector<double>& b, vector<Poin
 	p.push_back( Point3f((xz*z2 + x0) / xd, (yz*z2 + y0) / yd, z2) );*/
 	for (int z = 5; z < 100; z += 10)
 		p.push_back(Point3f((xz*z + x0) / xd, (yz*z + y0) / yd, z));
+}
+
+void check_laser_plane(const vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate)
+{
+	vector<Point3f> pos, normal, color;
+	float axis_size = 1.0;
+	double axis_value;
+	// add coordinate
+	{
+		pos.push_back(Point3f(0, 0, 0));
+		color.push_back(Point3f(0, 0, 0));
+		for (int i = 1; i < 100; i++)
+		{
+			axis_value = i * axis_size;
+			pos.push_back(Point3f(axis_value, 0, 0));
+			color.push_back(Point3f(1, 0, 0));
+			pos.push_back(Point3f(0, axis_value, 0));
+			color.push_back(Point3f(0, 1, 0));
+			pos.push_back(Point3f(0, 0, axis_value));
+			color.push_back(Point3f(0, 0, 1));
+		}
+	}
+
+	// add checkboard
+	{
+		vector<Point3f> tmp;
+		for (int j = 0; j < 7; j++)
+			for (int i = -50; i < -40; i++)
+			{
+				tmp.push_back(Point3f(i, j, 0));
+			}
+		vector<Point3f> pos_world;
+		coordinate[0].world_to_camera(tmp, pos_world);
+		for (int i = 0; i < pos_world.size(); i++)
+		{
+			//cout << pos[i] << "	->	" << pos_camera[i] << endl;
+			pos.push_back(pos_world[i]);
+			color.push_back(Point3f(1, 1, 0));
+		}
+	}
+
+	// add laser plane
+	{
+		vector<Point3f> laser_point_in_camera;
+		for (double i = -1; i <= 1; i += 0.1)
+		{
+			for (double j = -10; j <= 0; j += 0.1)
+			{
+				laser_point_in_camera.push_back(Point3f(i,
+					-(laser_plane_in_camera[0] * i + laser_plane_in_camera[2] * j
+						+ laser_plane_in_camera[3]) / laser_plane_in_camera[1], j));
+			}
+		}
+		for (int j = 0; j < laser_point_in_camera.size(); j++)
+		{
+			pos.push_back(laser_point_in_camera[j]);
+			color.push_back(Point3f(0, 1, 1));
+		}
+	}
+
+	{
+		for (int i = 0; i < 36; i+=40)
+		{
+				// add axis
+				{
+					vector<Point3f> tmp;
+					tmp.push_back(Point3f(0, 0, 0));
+					for (int i = 1; i < 100; i++)
+					{
+						axis_value = i * axis_size;
+						tmp.push_back(Point3f(axis_value, 0, 0));
+						tmp.push_back(Point3f(0, axis_value, 0));
+						tmp.push_back(Point3f(0, 0, axis_value));
+					}
+					vector<Point3f> pos_world;
+					coordinate[i].world_to_camera(tmp, pos_world);
+					cout << "the pos of world origin (0,0,0) in camera = " << pos_world[0] << endl;
+					pos.push_back(pos_world[0]);
+					color.push_back(Point3f(0, 0, 0));
+					//cout << pos[0] << "	->	" << pos_camera[0] << endl;
+					for (int i = 0; i < 99; i++)
+					{
+						//cout << pos[i] << "	->	" << pos_camera[i] << endl;
+						pos.push_back(pos_world[i * 3 + 1]);
+						color.push_back(Point3f(0.5, 0, 0));
+						pos.push_back(pos_world[i * 3 + 2]);
+						color.push_back(Point3f(0, 0.5, 0));
+						pos.push_back(pos_world[i * 3 + 3]);
+						color.push_back(Point3f(0, 0, 0.5));
+					}
+				}
+		}
+	}
+	export_pointcloud_ply("./output_virtual/camera_coord.ply", pos, normal, color);
 }
 
 #include "coor_system.h"
@@ -498,7 +597,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	//for (int i = 20; i < 21; i++)
 	for (int i = start_index; i <= end_index; i++)
 	{
-		if (i % 20 == 0)
+		//if (i % 20 == 0)
 			cout << i << " : " << image_files[i] << endl;
 
 		Mat inputImage, imageCopy;
@@ -556,9 +655,29 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 
 	//vector<double> laser_plane_in_camera;
 	{
+		float x, y, z;
+		for (int i = 1; i < laser_points_all_in_camera.size()-1; i++)
+		{
+			x = (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x) /
+				(laser_points_all_in_camera[i + 1].x - laser_points_all_in_camera[i].x);
+			y = (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y) /
+				(laser_points_all_in_camera[i + 1].y - laser_points_all_in_camera[i].y);
+			z = (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z) /
+				(laser_points_all_in_camera[i + 1].z - laser_points_all_in_camera[i].z);
+			cout << x / y << " " << y / z << endl;
+			/*cout << laser_points_all_in_camera[i] <<" : "
+				<< (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x)/
+				(laser_points_all_in_camera[i+1].x - laser_points_all_in_camera[i].x) << ", "
+				<< (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y)/
+				(laser_points_all_in_camera[i+1].y - laser_points_all_in_camera[i].y) << ", "
+				<< (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z)/
+				(laser_points_all_in_camera[i+1].z - laser_points_all_in_camera[i].z) << endl;*/
+
+		}
 		Ransac ransac_laser(laser_points_all_in_camera);
 		laser_plane_in_camera/*({ 21.2851, 18.0615, -10.2061, 357.398 })*/ = ransac_laser.fitPlane();
-		return;
+		//check_laser_plane(laser_plane_in_camera, coordinate);
+		//return;
 	}
 	
 	// compute the plane
@@ -618,9 +737,10 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 			(image_files[image_index].substr(image_files[image_index].find_last_of("_") + 1,
 				image_files[image_index].find_last_of(".") - image_files[image_index].find_last_of("_") - 1).c_str())
 		));
-		imwrite(out_file_path, image);
-		/*resize(image, image, Size(), 0.5, 0.5);
+		cout << out_file_path << endl;
+		/*imwrite(out_file_path, image);
+		resize(image, image, Size(), 0.5, 0.5);*/
 		imshow("output", image);
-		waitKey(0);*/
+		waitKey(0);
 	}
 }
