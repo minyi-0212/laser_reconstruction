@@ -22,7 +22,7 @@ using namespace cv;
 
 //#define output_drawAxis_pix
 //#define MASK_SHOW
-#define VIRTUAL
+//#define VIRTUAL
 
 static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameters> &params) {
 	FileStorage fs(filename, FileStorage::READ);
@@ -272,6 +272,11 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	}
 
 	Vec4f line;
+	if (laser.size() <= 2)
+	{
+		cout << "laser line cannot find." << endl;
+		return;
+	}
 	fitLine(laser, line, CV_DIST_L2, 0, 0.01, 0.01);
 	double k = line[1] / line[0],
 		b = line[3] - k * line[2];
@@ -317,7 +322,7 @@ void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& ma
 		}
 	}
 
-	vector<Point> maskInnerRect;
+	/*vector<Point> maskInnerRect;
 	for (int i = 0; i < 4; i++)
 		maskInnerRect.push_back(mask_point_in_pixel[i]);
 	for (int i = 0; i < inputImage.rows; i++)
@@ -330,7 +335,7 @@ void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& ma
 				Mask.at<uchar>(i, j) = 0;
 			}
 		}
-	}
+	}*/
 
 	Mat maskImg;
 	inputImage.copyTo(maskImg, Mask);
@@ -389,7 +394,7 @@ void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& ma
 				maxj = j;
 			}
 		}
-		if (val >= 200)
+		if (val >= 150)
 		{
 			laser.push_back(Point2f(maxj, i));
 		}
@@ -588,16 +593,16 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	vector<String> image_files;
 	cv::glob(filepath, image_files);
 	//vector<coor_system> coordinate(image_files.size(), coor_system(cameraMatrix));
-	coordinate.resize(image_files.size(), coor_system(cameraMatrix));
+	coordinate.resize(image_files.size());
+	for (int i = 0; i < coordinate.size(); i++)
+		coordinate[i] = coor_system(cameraMatrix);
+
 	vector<Point3d> laser_points_all_in_camera;
 	int start_index = 0, end_index = image_files.size() - 1;
-	//int start_index = 0, end_index = 10;
-	//for (int i = 20; i < 30; i++)
-	//for (int i = 0; i < image_files.size(); i++)
-	//for (int i = 20; i < 21; i++)
+	//int start_index = 20, end_index = 30;
 	for (int i = start_index; i <= end_index; i++)
 	{
-		//if (i % 20 == 0)
+		if (i % 20 == 0)
 			cout << i << " : " << image_files[i] << endl;
 
 		Mat inputImage, imageCopy;
@@ -622,6 +627,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 			squaresX, squaresY, squareLength, markerLength, axisLength,
 			cameraMatrix, one_distCoeffs))
 			continue;
+
 #ifdef output_drawAxis_pix
 		sprintf_s(out_file_path, "./virtual/coord_checkboard_%03d.png", i);
 		imwrite(out_file_path, imageCopy);
@@ -645,7 +651,8 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 		vector<Point2f> laser_points_in_pixel;
 		coordinate[i].world_to_pixel(mask_in_world, mask_in_pixel, cameraMatrix, one_distCoeffs);
 #ifndef VIRTUAL
-		compute_laser_line(inputImage, mask_in_pixel, laser_points_in_pixel, laser_points_all_in_camera, coordinate[i]);
+		if(i>=20 && i<=30)
+			compute_laser_line(inputImage, mask_in_pixel, laser_points_in_pixel, laser_points_all_in_camera, coordinate[i]);
 #endif
 #ifdef VIRTUAL
 		compute_laser_line_virtual(inputImage, mask_in_pixel, laser_points_in_pixel, laser_points_all_in_camera, coordinate[i]); // for virtual
@@ -655,31 +662,31 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 
 	//vector<double> laser_plane_in_camera;
 	{
-		float x, y, z;
-		for (int i = 1; i < laser_points_all_in_camera.size()-1; i++)
-		{
-			x = (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x) /
-				(laser_points_all_in_camera[i + 1].x - laser_points_all_in_camera[i].x);
-			y = (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y) /
-				(laser_points_all_in_camera[i + 1].y - laser_points_all_in_camera[i].y);
-			z = (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z) /
-				(laser_points_all_in_camera[i + 1].z - laser_points_all_in_camera[i].z);
-			cout << x / y << " " << y / z << endl;
-			/*cout << laser_points_all_in_camera[i] <<" : "
-				<< (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x)/
-				(laser_points_all_in_camera[i+1].x - laser_points_all_in_camera[i].x) << ", "
-				<< (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y)/
-				(laser_points_all_in_camera[i+1].y - laser_points_all_in_camera[i].y) << ", "
-				<< (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z)/
-				(laser_points_all_in_camera[i+1].z - laser_points_all_in_camera[i].z) << endl;*/
-
-		}
+		//float x, y, z;
+		//for (int i = 1; i < laser_points_all_in_camera.size()-1; i++)
+		//{
+		//	cout << laser_points_all_in_camera[i] << endl;
+		//	x = (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x) /
+		//		(laser_points_all_in_camera[i + 1].x - laser_points_all_in_camera[i].x);
+		//	y = (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y) /
+		//		(laser_points_all_in_camera[i + 1].y - laser_points_all_in_camera[i].y);
+		//	z = (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z) /
+		//		(laser_points_all_in_camera[i + 1].z - laser_points_all_in_camera[i].z);
+		//	cout << x / y << " " << y / z << endl;
+		//	/*cout << laser_points_all_in_camera[i] <<" : "
+		//		<< (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x)/
+		//		(laser_points_all_in_camera[i+1].x - laser_points_all_in_camera[i].x) << ", "
+		//		<< (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y)/
+		//		(laser_points_all_in_camera[i+1].y - laser_points_all_in_camera[i].y) << ", "
+		//		<< (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z)/
+		//		(laser_points_all_in_camera[i+1].z - laser_points_all_in_camera[i].z) << endl;*/
+		//}
 		Ransac ransac_laser(laser_points_all_in_camera);
 		laser_plane_in_camera/*({ 21.2851, 18.0615, -10.2061, 357.398 })*/ = ransac_laser.fitPlane();
 		//check_laser_plane(laser_plane_in_camera, coordinate);
 		//return;
 	}
-	
+
 	// compute the plane
 	for (int image_index = start_index; image_index <= end_index; image_index++)
 	{
@@ -733,14 +740,14 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 
 		line(image, section_point_pixel[0], section_point_pixel[section_point_pixel.size() - 1], Scalar(255, 0, 0), 3);
 		//line(image, section_point_pixel[3], section_point_pixel[4], Scalar(255, 0, 0), 3);
-		sprintf_s(out_file_path, "./virtual/checkboard_%03d.png", atoi(
+		sprintf_s(out_file_path, "./images2/dist_pose_%03d.png", atoi(
 			(image_files[image_index].substr(image_files[image_index].find_last_of("_") + 1,
 				image_files[image_index].find_last_of(".") - image_files[image_index].find_last_of("_") - 1).c_str())
 		));
-		cout << out_file_path << endl;
-		/*imwrite(out_file_path, image);
-		resize(image, image, Size(), 0.5, 0.5);*/
+		cout <<"output: "<< out_file_path << endl;
+		imwrite(out_file_path, image);
+		/*resize(image, image, Size(), 0.5, 0.5);
 		imshow("output", image);
-		waitKey(0);
+		waitKey(0);*/
 	}
 }

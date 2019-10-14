@@ -7,10 +7,16 @@ using namespace cv;
 
 coor_system::coor_system()
 {
+	cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
+	RT = Mat::zeros(4, 4, CV_64FC1);
+	cam_pos = Mat::zeros(4, 1, CV_64FC1);
 }
 
 coor_system::coor_system(const Mat& cameraM)
 {
+	cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
+	RT = Mat::zeros(4, 4, CV_64FC1);
+	cam_pos = Mat::zeros(4, 1, CV_64FC1);
 	init(cameraM);
 }
 
@@ -25,7 +31,7 @@ void coor_system::init(const Mat& cameraM)
 		cameraM.at<double>(2, 0), cameraM.at<double>(2, 1), cameraM.at<double>(2, 2), 0,
 		0, 0, 0, 1;*/
 		//cout << cameraMatrix << endl;
-	cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
+	//cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			cameraMatrix.at<double>(j, i) = cameraM.at<double>(j, i);
@@ -38,7 +44,7 @@ void coor_system::set_rt(const Vec3d& r, const Vec3d& t)
 	tvec = t;
 
 	// RT
-	RT = Mat::zeros(4, 4, CV_64FC1);
+	//RT = Mat::zeros(4, 4, CV_64FC1);
 	Mat R, rvecs = Mat(rvec);
 	Rodrigues(rvecs, R);// R 3x3
 	/*RT << R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), tvec[0],
@@ -55,7 +61,7 @@ void coor_system::set_rt(const Vec3d& r, const Vec3d& t)
 	//cout << "the rt matrix: " << RT << endl;
 
 	// cam_pos
-	cam_pos = Mat::zeros(4, 1, CV_64FC1);
+	//cam_pos = Mat::zeros(4, 1, CV_64FC1);
 	cam_pos.at<double>(0) = 0;
 	cam_pos.at<double>(1) = 0;
 	cam_pos.at<double>(2) = 0;
@@ -173,7 +179,7 @@ void coor_system::set_RT_matrix(const cv::Mat& RT_Mat)
 {
 	RT = RT_Mat;
 
-	cam_pos = Mat::zeros(4, 1, CV_64FC1);
+	//cam_pos = Mat::zeros(4, 1, CV_64FC1);
 	cam_pos.at<double>(0) = 0;
 	cam_pos.at<double>(1) = 0;
 	cam_pos.at<double>(2) = 0;

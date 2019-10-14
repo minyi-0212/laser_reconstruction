@@ -59,7 +59,7 @@ void find_the_max_point_of_each_line(const Mat& image, vector<Point2f>& laser_li
 				max_point.y = j;
 			}
 		}
-		if (max_val >= 120)
+		if (max_val >= 180)
 			laser_line.push_back(max_point);
 
 		/*for (int i = 0; i < image.cols; i++)
@@ -499,8 +499,8 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		}
 #endif
 
-		//sprintf_s(file, "%s/ball_%03d.png", filepath, 0);
-		sprintf_s(file, "%s/test_%03d.png", filepath, i);
+		sprintf_s(file, "%s/ball_%03d.png", filepath, 0);
+		//sprintf_s(file, "%s/test_%03d.png", filepath, i);
 		image = imread(file);
 #ifdef FIND_LASER
 		image_show = image.clone();

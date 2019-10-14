@@ -44,7 +44,7 @@ extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const 
 
 //#define COMPUTE_LASER_PLANE
 int main(int argc, char *argv[]) {
-	/*rename_file("../virtual_checkboard2", "test_");
+	/*rename_file("../virtual_cube2", "test_");
 	system("pause");
 	return 0;*/
 
@@ -88,7 +88,10 @@ int main(int argc, char *argv[]) {
 	/*std::string image_path = "E:/mygu/laser/laser_plane/image/*.png";
 	undistort_images(image_path, intrinsic_matrix_loaded, distortion_coeffs_loaded);*/
 	//compute_laser_plane_test(parser, "../image/pose_*.png", intrinsic_matrix_loaded, distortion_coeffs_loaded);
-	compute_laser_plane_test(parser, "./images/dist_pose_*.png", intrinsic_matrix_loaded, distortion_coeffs_loaded);
+	std::vector<double> laser_plane_in_camera;
+	std::vector<coor_system> coordinate;
+	compute_laser_plane_test(parser, "./images/dist_pose_*.png", intrinsic_matrix_loaded, distortion_coeffs_loaded,
+		laser_plane_in_camera, coordinate);
 #endif
 
 #ifndef COMPUTE_LASER_PLANE
@@ -155,7 +158,7 @@ int main(int argc, char *argv[]) {
 		Mat distortion_coeffs = cv::Mat::zeros(cv::Size(1, 14), CV_64FC1);
 		
 		compute_laser_plane_test(parser, 
-			"../virtual_checkboard/test_*.png", 
+			"../virtual_checkboard3/test_*.png",
 			camera_matrix, distortion_coeffs,
 			laser_plane_in_camera, coordinate);
 
@@ -165,16 +168,9 @@ int main(int argc, char *argv[]) {
 			cout << a << " ";
 		}
 		cout << endl;
-		//laser_plane_in_camera = std::vector<double>{ 0.980, 0.195, -0.040, 0 };
 		//laser_plane_in_camera = std::vector<double>{ -112.973, -10.135, -13.4221, -154.237 };
-		cout << "the plane: " << endl;
-		for (auto a : laser_plane_in_camera)
-		{
-			cout << a << " ";
-		}
-		cout << endl;
 		cout << "-------------------------------------------" << endl;
-		reconstruct_test2("../virtual_cube", camera_matrix, RT, laser_plane_in_camera, coordinate);
+		reconstruct_test2("../virtual_ball", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
 #endif
