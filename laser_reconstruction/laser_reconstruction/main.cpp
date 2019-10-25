@@ -40,11 +40,12 @@ extern void undistort_images(const std::string& pattern_jpg, const Mat& cameraMa
 extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const char filepath[],
 	const Mat& cameraMatrix, const Mat& distCoeffs,
 	std::vector<double>& laser_plane_in_camera, std::vector<coor_system>& coordinate);
+void check(const Mat& cameraMatrix, const Mat& RT);
 
 
 //#define COMPUTE_LASER_PLANE
 int main(int argc, char *argv[]) {
-	/*rename_file("../virtual_cube2", "test_");
+	/*rename_file("../virtual_checkboard2", "test_");
 	system("pause");
 	return 0;*/
 
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 		fs["camera_matrix"] >> camera_matrix;
-		fs["RT_matrix"] >> RT;
+		//fs["RT_matrix"] >> RT;
 		fs.release();
 
 		cout << "intrinsic matrix:" << endl << camera_matrix << endl;
@@ -114,9 +115,10 @@ int main(int argc, char *argv[]) {
 			4.7044376140907189e3 / 2, 0, 1024 / 2,
 			0, 4.7691463862436294e3 / 2, 768 / 2,
 			0, 0, 1);
-		cout << "intrinsic matrix:" << endl << camera_matrix << endl << endl;
+		cout << "intrinsic matrix:" << endl << camera_matrix << endl << endl;*/
 
-		cv::Vec3d cam_pos(0, 0.4, 0.5), lookat(0, 0.05, 0);
+		double unit=0.0206;
+		cv::Vec3d cam_pos(0, 0.4 / unit, 0.5 / unit), lookat(0, 0, 0);
 		cv::Vec3d z(lookat - cam_pos), y(0, -1, 0), x(y.cross(z));
 		y = z.cross(x);
 		cv::normalize(x, x);
@@ -131,7 +133,7 @@ int main(int argc, char *argv[]) {
 				1, 0, 0, -cam_pos[0],
 				0, 1, 0, -cam_pos[1],
 				0, 0, 1, -cam_pos[2],
-				0, 0, 0, 1);*/
+				0, 0, 0, 1);
 
 		/*RT = (cv::Mat_<double>(4, 4) <<
 			-4.37114e-08, 1.14662e-15, -1, 4.37114e-08,
@@ -148,9 +150,10 @@ int main(int argc, char *argv[]) {
 		fs.release();*/
 	}
 	
-	/*reconstruct_test("../virtual_ball", camera_matrix, RT, -0.2);
-	system("pause");
-	return 0;*/
+	//check(camera_matrix, RT);
+	////reconstruct_test("../virtual_ball", camera_matrix, RT, -0.2);
+	//system("pause");
+	//return 0;
 
 	{
 		std::vector<double> laser_plane_in_camera;
@@ -158,7 +161,7 @@ int main(int argc, char *argv[]) {
 		Mat distortion_coeffs = cv::Mat::zeros(cv::Size(1, 14), CV_64FC1);
 		
 		compute_laser_plane_test(parser, 
-			"../virtual_checkboard3/test_*.png",
+			"../virtual_checkboard2/test_*.png",
 			camera_matrix, distortion_coeffs,
 			laser_plane_in_camera, coordinate);
 
@@ -170,7 +173,7 @@ int main(int argc, char *argv[]) {
 		cout << endl;
 		//laser_plane_in_camera = std::vector<double>{ -112.973, -10.135, -13.4221, -154.237 };
 		cout << "-------------------------------------------" << endl;
-		reconstruct_test2("../virtual_ball", camera_matrix, RT, laser_plane_in_camera, coordinate);
+		reconstruct_test2("../virtual_cube", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
 #endif
