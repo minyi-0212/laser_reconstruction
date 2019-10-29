@@ -21,9 +21,9 @@ using std::ofstream;
 using namespace cv;
 
 #define M_PI 3.14159265358979323846
-#define output_drawAxis_pix
+//#define output_drawAxis_pix
 //#define MASK_SHOW
-#define VIRTUAL
+//#define VIRTUAL
 
 static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameters> &params) {
 	FileStorage fs(filename, FileStorage::READ);
@@ -59,7 +59,7 @@ void undistort_images(const string& pattern_jpg, const Mat& cameraMatrix, const 
 	vector<String> image_files;
 	cv::glob(pattern_jpg, image_files);
 
-	_mkdir("./images");
+	_mkdir("./real/cube_checkboard");
 	char path[_MAX_PATH];
 	for (int i = 0; i < image_files.size(); i++)
 	{
@@ -67,17 +67,25 @@ void undistort_images(const string& pattern_jpg, const Mat& cameraMatrix, const 
 		inputImage = imread(image_files[i]);
 		inputImage.copyTo(imageCopy);
 		undistort(imageCopy, inputImage, cameraMatrix, distCoeffs);
-		sprintf_s(path, "./images/dist_pose_%03d.png", atoi(
+		
+		cout << image_files[i] << " -> ";
+		//sprintf_s(path, "./cube_checkboard/dist_pose_%03d.png", i);
+		/*sprintf_s(path, "./cube_checkboard/dist_pose_%03d.png", atoi(
 			(image_files[i].substr(image_files[i].find_last_of("_") + 1,
 				image_files[i].find_last_of(".") - image_files[i].find_last_of("_") - 1).c_str())
+		));*/
+		cout << image_files[i].substr(image_files[i].find("a_") + 2,
+			image_files[i].find("_c_") - image_files[i].find("a_") - 2) << endl;
+		sprintf_s(path, "./real/cube_checkboard/dist_pose_%03d.png", atoi(
+			(image_files[i].substr(image_files[i].find("a_") + 2,
+				image_files[i].find("_c_") - image_files[i].find("a_") - 2).c_str())
 		));
 		cout << "undistort output: " << path << endl;
 		imwrite(path, inputImage);
 	}
 }
 
-int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_system,
-	const cv::CommandLineParser& parser,
+int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_system, const cv::CommandLineParser& parser,
 	int squaresX, int squaresY, float squareLength, float markerLength, float axisLength,
 	const Mat& cameraMatrix, const Mat& distCoeffs)
 {
@@ -100,11 +108,12 @@ int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_sys
 	// create charuco board object
 	Ptr<aruco::CharucoBoard> charucoboard = aruco::CharucoBoard::create(squaresX, squaresY,
 		squareLength, markerLength, dictionary);
+	cout << squaresX << " " << squaresY << endl;
 
-	/*Ptr<aruco::CharucoBoard> charucoboard_draw = aruco::CharucoBoard::create(12, 9,
+	/*Ptr<aruco::CharucoBoard> charucoboard_draw = aruco::CharucoBoard::create(14, 10,
 		squareLength, markerLength, dictionary);
 	cv::Mat boardImage;
-	charucoboard_draw->draw(cv::Size(2224, 1668), boardImage, 10, 1);
+	charucoboard_draw->draw(cv::Size(2048, 1536), boardImage, 10, 1);
 	imwrite("test.png", boardImage);
 	cv::imshow("boardImage", boardImage);
 	cv::waitKey(0);*/
@@ -146,8 +155,8 @@ int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_sys
 		//camera_coord.push_back(charucoCoord);
 		camera_coord.push_back(charucoCorners[i]);
 		int idx = charucoIds[i];
-		int x = idx % 4;
-		int y = idx / 4;
+		int x = idx % (squaresX - 1);
+		int y = idx / (squaresX - 1);
 		Point3f world_sample(x, y, 0);
 		//cout << "Point3f world_sample = " << world_sample << endl;
 		world_coord.push_back(world_sample);
@@ -175,6 +184,7 @@ int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_sys
 		return -1;
 	}
 	validPose = solvePnP(world_coord, camera_coord, cameraMatrix, distCoeffs, rvec, tvec, false, 0);
+	//validPose = cv::aruco::estimatePoseCharucoBoard(charucoCorners, charucoIds, charucoboard, cameraMatrix, distCoeffs, rvec, tvec);
 	/*cout << "rvec = " << rvec << endl;
 	cout << "tvec = " << tvec << endl << endl;*/
 	coordinate_system.set_rt(rvec, tvec);
@@ -194,10 +204,54 @@ int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_sys
 		cv::aruco::drawDetectedMarkers(imageCopy, markerCorners, markerIds);
 	if (charucoIds.size() > 0)
 		cv::aruco::drawDetectedCornersCharuco(imageCopy, charucoCorners, charucoIds, cv::Scalar(0, 0, 255));
-	//cv::resize(imageCopy, imageCopy, Size(), 0.5, 0.5, INTER_LINEAR);
-	//cv::imshow("test", imageCopy);
-	//cv::waitKey(0);
+	cv::resize(imageCopy, imageCopy, Size(), 0.5, 0.5, INTER_LINEAR);
+	cv::imshow("test", imageCopy);
+	cv::waitKey(0);
 #endif
+	return 0;
+}
+
+int estimate_pose_charuco_board(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_system,
+	int squaresX, int squaresY, float squareLength, float markerLength, const Mat& cameraMatrix, const Mat& distCoeffs)
+{
+	cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+	cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(squaresX, squaresY, squareLength, markerLength, dictionary);
+	//cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(12, 9, 0.01, 0.006, dictionary);
+	inputImage.copyTo(imageCopy);
+	std::vector<int> ids;
+	std::vector<std::vector<cv::Point2f>> corners;
+	cv::aruco::detectMarkers(inputImage, dictionary, corners, ids);
+	// if at least one marker detected
+	if (ids.size() > 4) {
+#ifdef output_drawAxis_pix
+		cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
+#endif
+		std::vector<cv::Point2f> charucoCorners;
+		std::vector<int> charucoIds;
+		cv::aruco::interpolateCornersCharuco(corners, ids, inputImage, board, charucoCorners, charucoIds, cameraMatrix, distCoeffs);
+		// if at least one charuco corner detected
+		if (charucoIds.size() > 0) {
+			cv::Vec3d rvec, tvec;
+			bool valid = cv::aruco::estimatePoseCharucoBoard(charucoCorners, charucoIds, board, cameraMatrix, distCoeffs, rvec, tvec);
+			coordinate_system.set_rt(rvec, tvec);
+			// if charuco pose is valid
+#ifdef output_drawAxis_pix
+			cv::aruco::drawDetectedCornersCharuco(imageCopy, charucoCorners, charucoIds, cv::Scalar(0, 0, 255));
+			if (valid)
+			{
+				cv::aruco::drawAxis(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
+			}
+#endif
+		}
+	}
+	else
+	{
+		cout << " not enough charuco corners for pose detect" << endl;
+		return -1;
+	}
+	/*cv::resize(imageCopy, imageCopy, Size(), 0.5, 0.5);
+	cv::imshow("out", imageCopy);
+	cv::waitKey(0);*/
 	return 0;
 }
 
@@ -242,14 +296,17 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	//Mat undistImg;
 	//undistort(maskImg, undistImg, intrinsic_matrix_loaded, distortion_coeffs_loaded);
 
-	/*Mat maskShow;
+#ifdef MASK_SHOW
+	Mat maskShow;
 	maskImg.copyTo(maskShow);
-	for (int i = 0; i < twodvecMask.size(); i++)
-		circle(maskShow, twodvecMask[i], 3, Scalar(0, 0, 255), 3);
-	resize(Mask, Mask, Size(), 0.5, 0.5);
-	resize(maskShow, maskShow, Size(), 0.5, 0.5);
+	for (int i = 0; i < mask_point_in_pixel.size(); i++)
+		circle(maskShow, mask_point_in_pixel[i], 3, Scalar(0, 0, 255), 3);
+	resize(Mask, Mask, Size(), 0.25, 0.25);
+	resize(maskShow, maskShow, Size(), 0.25, 0.25);
 	imshow("mask", Mask);
-	imshow("mask_add", maskShow);*/
+	imshow("mask_add", maskShow);
+	//cv::waitKey(0);
+#endif
 
 	vector<Mat> channels;
 	split(maskImg, channels);
@@ -269,7 +326,7 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 				maxj = j;
 			}
 		}
-		if (val >= 120)
+		if (val >= 150)
 		{
 			laser.push_back(Point2f(maxj, i));
 		}
@@ -285,7 +342,7 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	double k = line[1] / line[0],
 		b = line[3] - k * line[2];
 	coordinate_system.set_laser_line(k, b);
-	vector<Point2f> tmp_points_in_pixel({ Point2d((100 - b) / k, 100), Point2d((2000 - b) / k, 2000) });
+	vector<Point2f> tmp_points_in_pixel({ Point2d((100 - b) / k, 100), Point2d((2900 - b) / k, 2900) });
 	vector<Point3f> tmp_points_in_camera, tmp_points_in_world;
 	coordinate_system.pixel_to_world(tmp_points_in_pixel, tmp_points_in_world);
 	coordinate_system.world_to_camera(tmp_points_in_world, tmp_points_in_camera);
@@ -295,14 +352,21 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 		laser_points_all_in_camera.push_back(p);
 	}
 
-	/*vector<Point2d> laser_points_in_pixel_coord;
+#ifdef MASK_SHOW
+	for (auto p : laser)
+	{
+		circle(maskImg, p, 2, Scalar(0, 255, 255), 2);
+	}
+
+	vector<Point2d> laser_points_in_pixel_coord;
 	laser_points_in_pixel_coord.push_back(Point2d((100 - b) / k, 100));
-	laser_points_in_pixel_coord.push_back(Point2d((2000 - b) / k, 2000));
+	laser_points_in_pixel_coord.push_back(Point2d((2500 - b) / k, 2500));
 	cout << laser_points_in_pixel_coord[0] << endl << laser_points_in_pixel_coord[1] << endl;
 	cv::line(maskImg, laser_points_in_pixel_coord[0], laser_points_in_pixel_coord[1], Scalar(0, 255, 0), 2);
-	cv::resize(maskImg, maskImg, Size(), 0.5, 0.5);
+	cv::resize(maskImg, maskImg, Size(), 0.25, 0.25);
 	cv::imshow("test", maskImg);
-	cv::waitKey(0);*/
+	cv::waitKey(0);
+#endif
 }
 
 void compute_laser_line_virtual(const Mat& inputImage, const vector<Point2f>& mask_point_in_pixel,
@@ -570,14 +634,26 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	vector<Point3f> mask_in_world, laser_points_in_world;
 	{
 #ifndef VIRTUAL
-		mask_in_world.push_back(Point3f(-1.3, -1.25, 0));
+		// for ty's phone
+		/*mask_in_world.push_back(Point3f(-1.3, -1.25, 0));
 		mask_in_world.push_back(Point3f(4.5, -1.25, 0));
 		mask_in_world.push_back(Point3f(4.5, 6.35, 0));
 		mask_in_world.push_back(Point3f(-1.3, 6.35, 0));
 		mask_in_world.push_back(Point3f(-1.5, -3.85, 0));
 		mask_in_world.push_back(Point3f(4.7, -3.85, 0));
 		mask_in_world.push_back(Point3f(4.7, 8.95, 0));
-		mask_in_world.push_back(Point3f(-1.5, 8.95, 0));
+		mask_in_world.push_back(Point3f(-1.5, 8.95, 0));*/
+
+		// xuezhang's pad
+		mask_in_world.push_back(Point3f(-0.4, -0.5, 0));
+		mask_in_world.push_back(Point3f(14 * 1.4 + 0.4, -0.5, 0));
+		mask_in_world.push_back(Point3f(14 * 1.4 + 0.4, 10 * 1.4 + 0.5, 0));
+		mask_in_world.push_back(Point3f(-0.4, 10 * 1.4 + 0.5, 0));
+
+		mask_in_world.push_back(Point3f(-2.15, -1.4, 0));
+		mask_in_world.push_back(Point3f(14 * 1.4 + 2.15, -1.4, 0));
+		mask_in_world.push_back(Point3f(14 * 1.4 + 2.15, 10 * 1.4 + 1.4, 0));
+		mask_in_world.push_back(Point3f(-2.15, 10 * 1.4 + 1.4, 0));
 #endif
 
 #ifdef VIRTUAL
@@ -592,9 +668,9 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 #endif
 	}
 
-	char out_file_path[_MAX_PATH];
-
-	_mkdir("./virtual");
+	char out_file_path[_MAX_PATH], output_dir[_MAX_PATH];
+	sprintf_s(output_dir, "./real/cube_checkboard");
+	_mkdir(output_dir);
 	vector<String> image_files;
 	cv::glob(filepath, image_files);
 	//vector<coor_system> coordinate(image_files.size(), coor_system(cameraMatrix));
@@ -628,13 +704,16 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 			cv::line(imageCopy, pixels[1], pixels_out[1], Scalar(0, 0, 255), 3);
 		}*/
 
-		if (sovle_pnp(inputImage, imageCopy, coordinate[i], parser,
+		/*if (sovle_pnp(inputImage, imageCopy, coordinate[i], parser,
 			squaresX, squaresY, squareLength, markerLength, axisLength,
 			cameraMatrix, one_distCoeffs))
+			continue;*/
+
+		if (estimate_pose_charuco_board(inputImage, imageCopy, coordinate[i], squaresX, squaresY, squareLength, markerLength, cameraMatrix, one_distCoeffs)) 
 			continue;
 
 #ifdef output_drawAxis_pix
-		sprintf_s(out_file_path, "./virtual/coord_checkboard_%03d.png", i);
+		sprintf_s(out_file_path, "%s/coord_checkboard_%03d.png", output_dir, i);
 		imwrite(out_file_path, imageCopy);
 #endif
 		// use to test the coordinate transfer
@@ -656,7 +735,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 		vector<Point2f> laser_points_in_pixel;
 		coordinate[i].world_to_pixel(mask_in_world, mask_in_pixel, cameraMatrix, one_distCoeffs);
 #ifndef VIRTUAL
-		if(i>=20 && i<=30)
+		//if(i>=20 && i<=30)
 			compute_laser_line(inputImage, mask_in_pixel, laser_points_in_pixel, laser_points_all_in_camera, coordinate[i]);
 #endif
 #ifdef VIRTUAL
@@ -665,45 +744,44 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	}
 	cout << "image rt compute ok. " << laser_points_all_in_camera.size() << endl;
 
+	Ransac ransac_laser(laser_points_all_in_camera);
+	laser_plane_in_camera/*({ 21.2851, 18.0615, -10.2061, 357.398 })*/ = ransac_laser.fitPlane();
+	return;
+
 	//vector<double> laser_plane_in_camera;
-	vector<Point3f> pos, normal, color;
-	{
-		//float x, y, z;
-		//for (int i = 1; i < laser_points_all_in_camera.size()-1; i++)
-		//{
-		//	cout << laser_points_all_in_camera[i] << endl;
-		//	x = (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x) /
-		//		(laser_points_all_in_camera[i + 1].x - laser_points_all_in_camera[i].x);
-		//	y = (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y) /
-		//		(laser_points_all_in_camera[i + 1].y - laser_points_all_in_camera[i].y);
-		//	z = (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z) /
-		//		(laser_points_all_in_camera[i + 1].z - laser_points_all_in_camera[i].z);
-		//	cout << x / y << " " << y / z << endl;
-		//	/*cout << laser_points_all_in_camera[i] <<" : "
-		//		<< (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x)/
-		//		(laser_points_all_in_camera[i+1].x - laser_points_all_in_camera[i].x) << ", "
-		//		<< (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y)/
-		//		(laser_points_all_in_camera[i+1].y - laser_points_all_in_camera[i].y) << ", "
-		//		<< (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z)/
-		//		(laser_points_all_in_camera[i+1].z - laser_points_all_in_camera[i].z) << endl;*/
-		//}
-		Ransac ransac_laser(laser_points_all_in_camera);
-		laser_plane_in_camera/*({ 21.2851, 18.0615, -10.2061, 357.398 })*/ = ransac_laser.fitPlane();
-
-		{
-			pos.push_back(Point3f(0, 0, 0));
-			color.push_back(Point3f(0, 0, 1));
-			for (int i = 0; i < laser_points_all_in_camera.size(); i++)
-			//for (int i = 60; i < 66; i++)
-			{
-				pos.push_back(laser_points_all_in_camera[i]);
-				color.push_back(Point3f(1, 1, 0));
-			}
-		}
-
-		check_laser_plane(laser_plane_in_camera, coordinate);
-		return;
-	}
+	//vector<Point3f> pos, normal, color;
+	//{
+	//	//float x, y, z;
+	//	//for (int i = 1; i < laser_points_all_in_camera.size()-1; i++)
+	//	//{
+	//	//	cout << laser_points_all_in_camera[i] << endl;
+	//	//	x = (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x) /
+	//	//		(laser_points_all_in_camera[i + 1].x - laser_points_all_in_camera[i].x);
+	//	//	y = (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y) /
+	//	//		(laser_points_all_in_camera[i + 1].y - laser_points_all_in_camera[i].y);
+	//	//	z = (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z) /
+	//	//		(laser_points_all_in_camera[i + 1].z - laser_points_all_in_camera[i].z);
+	//	//	cout << x / y << " " << y / z << endl;
+	//	//	/*cout << laser_points_all_in_camera[i] <<" : "
+	//	//		<< (laser_points_all_in_camera[i].x - laser_points_all_in_camera[i - 1].x)/
+	//	//		(laser_points_all_in_camera[i+1].x - laser_points_all_in_camera[i].x) << ", "
+	//	//		<< (laser_points_all_in_camera[i].y - laser_points_all_in_camera[i - 1].y)/
+	//	//		(laser_points_all_in_camera[i+1].y - laser_points_all_in_camera[i].y) << ", "
+	//	//		<< (laser_points_all_in_camera[i].z - laser_points_all_in_camera[i - 1].z)/
+	//	//		(laser_points_all_in_camera[i+1].z - laser_points_all_in_camera[i].z) << endl;*/
+	//	//}
+	//	{
+	//		pos.push_back(Point3f(0, 0, 0));
+	//		color.push_back(Point3f(0, 0, 1));
+	//		for (int i = 0; i < laser_points_all_in_camera.size(); i++)
+	//		//for (int i = 60; i < 66; i++)
+	//		{
+	//			pos.push_back(laser_points_all_in_camera[i]);
+	//			color.push_back(Point3f(1, 1, 0));
+	//		}
+	//	}
+	//	check_laser_plane(laser_plane_in_camera, coordinate);
+	//}
 
 	// compute the plane
 	for (int image_index = start_index; image_index <= end_index; image_index++)
@@ -713,7 +791,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 		//int image_index = 20;
 		Mat image = imread(image_files[image_index]);
 		Point2f laser_point_pixel_1 = coordinate[image_index].get_laser_line_point(50),
-			laser_point_pixel_2 = coordinate[image_index].get_laser_line_point(2000);
+			laser_point_pixel_2 = coordinate[image_index].get_laser_line_point(2900);
 		line(image, laser_point_pixel_1, laser_point_pixel_2, Scalar(0, 0, 255), 5);
 
 		// compute the image plane
@@ -756,18 +834,18 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 			section_point_camera[i].z*image_plane_in_camera[2] +
 			image_plane_in_camera[3] << endl << endl;*/
 
-		if (image_index == 25)
+		/*if (image_index == 25)
 		{
 			for (auto p: section_point_camera)
 			{
 				pos.push_back(p);
 				color.push_back(Point3f(1, 0, 0));
 			}
-		}
+		}*/
 
 		line(image, section_point_pixel[0], section_point_pixel[section_point_pixel.size() - 1], Scalar(255, 0, 0), 3);
 		//line(image, section_point_pixel[3], section_point_pixel[4], Scalar(255, 0, 0), 3);
-		sprintf_s(out_file_path, "./virtual/dist_pose_%03d.png", atoi(
+		sprintf_s(out_file_path, "%s/result_%03d.png", output_dir, atoi(
 			(image_files[image_index].substr(image_files[image_index].find_last_of("_") + 1,
 				image_files[image_index].find_last_of(".") - image_files[image_index].find_last_of("_") - 1).c_str())
 		));
@@ -777,7 +855,8 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 		imshow("output", image);
 		waitKey(0);*/
 	}
-	export_pointcloud_ply("./output_virtual/laser_plane_check.ply", pos, normal, color);
+	sprintf_s(out_file_path, "%s/laser_plane_check.ply", output_dir);
+	//export_pointcloud_ply(out_file_path, pos, normal, color);
 }
 
 void check(const Mat& cameraMatrix, const Mat& RT)

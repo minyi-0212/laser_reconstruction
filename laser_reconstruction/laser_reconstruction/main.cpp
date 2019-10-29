@@ -41,6 +41,7 @@ extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const 
 	const Mat& cameraMatrix, const Mat& distCoeffs,
 	std::vector<double>& laser_plane_in_camera, std::vector<coor_system>& coordinate);
 void check(const Mat& cameraMatrix, const Mat& RT);
+extern int test_aruco(const cv::Mat& cameraMatrix);
 
 
 //#define COMPUTE_LASER_PLANE
@@ -68,6 +69,7 @@ int main(int argc, char *argv[]) {
 #ifdef COMPUTE_LASER_PLANE
 	//read camera intrinsic
 	cv::Mat intrinsic_matrix_loaded, distortion_coeffs_loaded;
+	int width, height;
 	{
 		cv::FileStorage fs(parser.get<std::string>(0), cv::FileStorage::READ);
 		if (!fs.isOpened())
@@ -76,32 +78,37 @@ int main(int argc, char *argv[]) {
 			system("pause");
 			return 0;
 		}
+		
 		fs["camera_matrix"] >> intrinsic_matrix_loaded;
 		fs["distortion_coefficients"] >> distortion_coeffs_loaded;
+		fs["image_width"] >> width;
+		fs["image_height"] >> height;
 		fs.release();
 
-		/*cout << "image width: " << static_cast<int>(fs["image_width"]) << endl
-			<< "image height: " << static_cast<int>(fs["image_height"]) << endl
+		cout << "image width: " << width << endl
+			<< "image height: " << height << endl
 			<< "intrinsic matrix:" << endl << intrinsic_matrix_loaded << endl
-			<< "distortion coefficients: " << endl << distortion_coeffs_loaded << endl << endl;*/
+			<< "distortion coefficients: " << endl << distortion_coeffs_loaded << endl << endl;
 	}
+	//test_aruco(intrinsic_matrix_loaded);
+
 	// compute the laser plane
-	/*std::string image_path = "E:/mygu/laser/laser_plane/image/*.png";
+	/*std::string image_path = "../real/images/*.png";
 	undistort_images(image_path, intrinsic_matrix_loaded, distortion_coeffs_loaded);*/
-	//compute_laser_plane_test(parser, "../image/pose_*.png", intrinsic_matrix_loaded, distortion_coeffs_loaded);
 	std::vector<double> laser_plane_in_camera;
 	std::vector<coor_system> coordinate;
-	compute_laser_plane_test(parser, "./images/dist_pose_*.png", intrinsic_matrix_loaded, distortion_coeffs_loaded,
+	compute_laser_plane_test(parser, "./real/cube_checkboard/dist_pose_*.png", 
+		intrinsic_matrix_loaded, distortion_coeffs_loaded,
 		laser_plane_in_camera, coordinate);
 #endif
 
 #ifndef COMPUTE_LASER_PLANE
 	cv::Mat camera_matrix, RT;
 	{
-		cv::FileStorage fs("../input/intrinsic_virtual.yml", cv::FileStorage::READ);
+		cv::FileStorage fs("../input/intrinsic.yml", cv::FileStorage::READ);
 		if (!fs.isOpened())
 		{
-			std::cout << "../input/intrinsic_virtual.yml not exists." << std::endl;
+			std::cout << "../input/intrinsic.yml not exists." << std::endl;
 			system("pause");
 			return 0;
 		}
@@ -161,18 +168,17 @@ int main(int argc, char *argv[]) {
 		Mat distortion_coeffs = cv::Mat::zeros(cv::Size(1, 14), CV_64FC1);
 		
 		compute_laser_plane_test(parser, 
-			"../virtual_checkboard2/test_*.png",
+			//"../virtual_checkboard2/test_*.png",
+			"./real/cube_checkboard/dist_pose_*.png",
 			camera_matrix, distortion_coeffs,
 			laser_plane_in_camera, coordinate);
-
 		cout << "the plane: " << endl;
 		for (auto a : laser_plane_in_camera)
 		{
 			cout << a << " ";
 		}
-		cout << endl;
-		//laser_plane_in_camera = std::vector<double>{ -112.973, -10.135, -13.4221, -154.237 };
-		cout << "-------------------------------------------" << endl;
+		cout << endl << "-------------------------------------------" << endl;
+
 		reconstruct_test2("../virtual_cube", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
