@@ -100,8 +100,11 @@ int sovle_pnp(const Mat& inputImage, Mat& imageCopy, coor_system& coordinate_sys
 	// create charuco board object
 	Ptr<aruco::CharucoBoard> charucoboard = aruco::CharucoBoard::create(squaresX, squaresY,
 		squareLength, markerLength, dictionary);
-	/*cv::Mat boardImage;
-	charucoboard->draw(cv::Size(600, 500), boardImage, 10, 1);
+
+	/*Ptr<aruco::CharucoBoard> charucoboard_draw = aruco::CharucoBoard::create(12, 9,
+		squareLength, markerLength, dictionary);
+	cv::Mat boardImage;
+	charucoboard_draw->draw(cv::Size(2224, 1668), boardImage, 10, 1);
 	imwrite("test.png", boardImage);
 	cv::imshow("boardImage", boardImage);
 	cv::waitKey(0);*/
