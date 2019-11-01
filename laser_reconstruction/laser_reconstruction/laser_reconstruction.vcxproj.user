@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>../input/intrinsic.yml -dp=../input/detector_params.yml -w=5 -h=7 -sl=0.01 -ml=0.006 -d=10 -folder=../image -read=true</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>../input/intrinsic.yml -dp=../input/detector_params.yml -w=14 -h=10 -sl=1.4 -ml=0.84 -d=10 -folder=../image -read=true</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

@@ -2,6 +2,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <fstream>
 using namespace std;
 using namespace cv;
 
@@ -109,4 +110,25 @@ void rename_file(const char path[], const char prifix[])
 			image_files[i].find_last_of(".") - image_files[i].find(prifix) - strlen(prifix)).c_str() << endl;*/
 		imwrite(files, inputImage);
 	}
+}
+
+void laser_points_find_analysis()
+{
+	Mat image = imread("./rabbit/dist_pose_009.png");
+	ofstream outFile;
+	outFile.open("./rabbit/rabbit_009_data.csv");
+	int begin_line = 1738, end_line = begin_line + 10;
+	cout << image.type() <<" " << CV_8UC3 << endl;
+	double tmp;
+	for (int j = begin_line; j < end_line; j++)
+	{
+		//for (int i = 0; i < image.cols; i++)
+		for (int i = 1722; i < 2121; i++)
+		{
+			tmp = image.at<Vec3b>(j, i)[1];
+			outFile << tmp << ",";
+		}
+		outFile << endl;
+	}
+	outFile.close();
 }

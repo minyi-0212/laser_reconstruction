@@ -36,19 +36,23 @@ namespace {
 		"{sc       | false | Show detected chessboard corners after calibration }";
 }
 
-extern void undistort_images(const std::string& pattern_jpg, const Mat& cameraMatrix, const Mat& distCoeffs);
-extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const char filepath[],
+extern void undistort_images(const std::string& input_file, const std::string& output_path, const std::string& output_prefix,
+	const Mat& cameraMatrix, const Mat& distCoeffs);
+extern void compute_laser_plane_test(const cv::CommandLineParser& parser, const char filepath[], const std::string& output_path,
 	const Mat& cameraMatrix, const Mat& distCoeffs,
 	std::vector<double>& laser_plane_in_camera, std::vector<coor_system>& coordinate);
-void check(const Mat& cameraMatrix, const Mat& RT);
+extern void check(const Mat& cameraMatrix, const Mat& RT);
 extern int test_aruco(const cv::Mat& cameraMatrix);
+extern void laser_points_find_analysis();
 
 
 //#define COMPUTE_LASER_PLANE
 int main(int argc, char *argv[]) {
-	/*rename_file("../virtual_checkboard2", "test_");
+	
+	//rename_file("../images", "test_");
+	laser_points_find_analysis();
 	system("pause");
-	return 0;*/
+	return 0;
 
 	// parser the params of the exe
 	cv::CommandLineParser parser(argc, argv, keys);
@@ -93,13 +97,17 @@ int main(int argc, char *argv[]) {
 	//test_aruco(intrinsic_matrix_loaded);
 
 	// compute the laser plane
-	/*std::string image_path = "../real/images/*.png";
-	undistort_images(image_path, intrinsic_matrix_loaded, distortion_coeffs_loaded);*/
-	std::vector<double> laser_plane_in_camera;
+	std::string image_path = "D:/smiling/data/rabbit/*.png",
+		output_file = "./rabbit",
+		output_prefix = "dist_pose_";
+	undistort_images(image_path, output_file, output_prefix, intrinsic_matrix_loaded, distortion_coeffs_loaded);
+
+	/*std::vector<double> laser_plane_in_camera;
 	std::vector<coor_system> coordinate;
-	compute_laser_plane_test(parser, "./real/cube_checkboard/dist_pose_*.png", 
+	std::string output_file = "./cube_checkboard";
+	compute_laser_plane_test(parser, "cube_checkboard/dist_pose_*.png", output_file,
 		intrinsic_matrix_loaded, distortion_coeffs_loaded,
-		laser_plane_in_camera, coordinate);
+		laser_plane_in_camera, coordinate);*/
 #endif
 
 #ifndef COMPUTE_LASER_PLANE
@@ -167,10 +175,11 @@ int main(int argc, char *argv[]) {
 		std::vector<coor_system> coordinate;
 		Mat distortion_coeffs = cv::Mat::zeros(cv::Size(1, 14), CV_64FC1);
 		
-		compute_laser_plane_test(parser, 
-			//"../virtual_checkboard2/test_*.png",
-			"./real/cube_checkboard/dist_pose_*.png",
-			camera_matrix, distortion_coeffs,
+		std::string output_file = "./cube_checkboard";
+		compute_laser_plane_test(parser,
+			//"./real/cube_checkboard/dist_pose_*.png",
+			"cube_checkboard/dist_pose_*.png",
+			output_file, camera_matrix, distortion_coeffs,
 			laser_plane_in_camera, coordinate);
 		cout << "the plane: " << endl;
 		for (auto a : laser_plane_in_camera)
@@ -178,8 +187,8 @@ int main(int argc, char *argv[]) {
 			cout << a << " ";
 		}
 		cout << endl << "-------------------------------------------" << endl;
-
-		reconstruct_test2("../virtual_cube", camera_matrix, RT, laser_plane_in_camera, coordinate);
+		//-184.04 311.931 108.288 - 5375.86
+		reconstruct_test2("./rabbit", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
 #endif

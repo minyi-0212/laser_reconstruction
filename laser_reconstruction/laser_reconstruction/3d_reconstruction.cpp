@@ -59,7 +59,7 @@ void find_the_max_point_of_each_line(const Mat& image, vector<Point2f>& laser_li
 				max_point.y = j;
 			}
 		}
-		if (max_val >= 180)
+		if (max_val >= 120)
 			laser_line.push_back(max_point);
 
 		/*for (int i = 0; i < image.cols; i++)
@@ -103,13 +103,13 @@ void rotate(const Point3f& axis, double angle, vector<Point3f>& points)
 	}
 }
 
-#define OUTPUT_PLY
+//#define OUTPUT_PLY
 //#define cam_coord_ply
 //#define real_world_coordinate
 //#define laser_plane
 //#define laser_plane_compute
 //#define checkboard
-#define ball
+//#define ball
 
 void reconstruct_test(const char* filepath, const Mat& camera_matrix, const Mat& RT, const float rotate_angle)
 {
@@ -508,7 +508,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	}
 #endif
 
-	for (int i = 0; i < 36; i++)
+	for (int i = 0; i < 40; i++)
 	{
 #ifdef OUTPUT_PLY
 		{
@@ -535,7 +535,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 #endif
 
 		//sprintf_s(file, "%s/test_%03d.png", filepath, 0);
-		sprintf_s(file, "%s/test_%03d.png", filepath, i);
+		sprintf_s(file, "%s/dist_pose_%03d.png", filepath, i);
 		cout << file << endl;
 		image = imread(file);
 #ifdef FIND_LASER
@@ -547,6 +547,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		//cout << laser_line_point.size() << endl;
 		for(auto p: laser_line_point)
 			circle(image_show, p, 2, Scalar(0,0,255));
+		resize(image_show, image_show, Size(image_show.cols / 2, image_show.rows / 2));
 		imshow("tmp", image_show);
 		waitKey(0);
 #endif
@@ -565,9 +566,9 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		for (int j = 0; j < laser_line_point_in_camera.size(); j++)
 		{
 			pos.push_back(laser_line_point_in_camera[j]);
-			color.push_back(Point3f(i / 36.0, (i % 24) / 24.0, (i % 12) / 12.0));
+			color.push_back(Point3f(i / 40.0, (i % 24) / 24.0, (i % 12) / 12.0));
 			//color.push_back(Point3f(1, 1, 1));
 		}
 	}
-	export_pointcloud_ply("./output_virtual/reconstruction_cube.ply", pos, normal, color);
+	export_pointcloud_ply("./rabbit/reconstruction.ply", pos, normal, color);
 }

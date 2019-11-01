@@ -125,6 +125,7 @@
     <ClCompile Include="laser_plane_compute.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ransac.cpp" />
+    <ClCompile Include="test_aruco.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3d_reconstruction.h" />

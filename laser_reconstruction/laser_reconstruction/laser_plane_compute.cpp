@@ -53,13 +53,14 @@ static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameter
 }
 
 // for overall new test
-void undistort_images(const string& pattern_jpg, const Mat& cameraMatrix, const Mat& distCoeffs)
+void undistort_images(const string& input_file, const string& output_path, const string& output_prefix,
+	const Mat& cameraMatrix, const Mat& distCoeffs)
 {
 	//string pattern_jpg = "E:/mygu/laser/laser_plane/image/*.png";
 	vector<String> image_files;
-	cv::glob(pattern_jpg, image_files);
+	cv::glob(input_file, image_files);
 
-	_mkdir("./real/cube_checkboard");
+	_mkdir(output_path.c_str());
 	char path[_MAX_PATH];
 	for (int i = 0; i < image_files.size(); i++)
 	{
@@ -76,10 +77,9 @@ void undistort_images(const string& pattern_jpg, const Mat& cameraMatrix, const 
 		));*/
 		cout << image_files[i].substr(image_files[i].find("a_") + 2,
 			image_files[i].find("_c_") - image_files[i].find("a_") - 2) << endl;
-		sprintf_s(path, "./real/cube_checkboard/dist_pose_%03d.png", atoi(
-			(image_files[i].substr(image_files[i].find("a_") + 2,
-				image_files[i].find("_c_") - image_files[i].find("a_") - 2).c_str())
-		));
+		sprintf_s(path, "%s//%s%03d.png", output_path.c_str(), output_prefix.c_str(),
+			atoi((image_files[i].substr(image_files[i].find("a_") + 2,
+				image_files[i].find("_c_") - image_files[i].find("a_") - 2).c_str())));
 		cout << "undistort output: " << path << endl;
 		imwrite(path, inputImage);
 	}
@@ -621,7 +621,7 @@ void check_laser_plane(const vector<double>& laser_plane_in_camera, vector<coor_
 }
 
 #include "coor_system.h"
-void compute_laser_plane_test(const cv::CommandLineParser& parser, const char filepath[],
+void compute_laser_plane_test(const cv::CommandLineParser& parser, const char filepath[], const string& output_path,
 	const Mat& cameraMatrix, const Mat& distCoeffs, 
 	vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate)
 {
@@ -669,7 +669,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	}
 
 	char out_file_path[_MAX_PATH], output_dir[_MAX_PATH];
-	sprintf_s(output_dir, "./real/cube_checkboard");
+	sprintf_s(output_dir, output_path.c_str());
 	_mkdir(output_dir);
 	vector<String> image_files;
 	cv::glob(filepath, image_files);
