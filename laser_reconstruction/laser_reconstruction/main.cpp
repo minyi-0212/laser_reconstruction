@@ -50,9 +50,9 @@ extern void laser_points_find_analysis();
 int main(int argc, char *argv[]) {
 	
 	//rename_file("../images", "test_");
-	laser_points_find_analysis();
-	system("pause");
-	return 0;
+	//laser_points_find_analysis();
+	/*system("pause");
+	return 0;*/
 
 	// parser the params of the exe
 	cv::CommandLineParser parser(argc, argv, keys);
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 		}
 		cout << endl << "-------------------------------------------" << endl;
 		//-184.04 311.931 108.288 - 5375.86
-		reconstruct_test2("./rabbit", camera_matrix, RT, laser_plane_in_camera, coordinate);
+		reconstruct_test2("./squirrel", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 
 #endif

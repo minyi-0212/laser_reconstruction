@@ -74,6 +74,57 @@ void find_the_max_point_of_each_line(const Mat& image, vector<Point2f>& laser_li
 	}
 }
 
+void find_the_max_point_of_each_column(const Mat& image, vector<Point2f>& laser_line, const cv::Rect& region)
+{
+	/*laser_line.clear();
+	double max_val;
+	Point2f max_point;
+	for (int i = region.x; i < region.x+region.width; i++)
+	{
+		max_val = 0;
+		for (int j = region.y; j < region.y+region.height; j++)
+		{
+			if (image.at<Vec3b>(j, i)[1] > max_val)
+			{
+				max_val = image.at<Vec3b>(j, i)[1];
+				max_point.x = i;
+				max_point.y = j;
+			}
+		}
+		if (max_val >= 120)
+			laser_line.push_back(max_point);
+	}*/
+
+	laser_line.clear();
+	double max_val;
+	Point2f max_point;
+	vector<float> image_vec(region.height, 0),
+		image_result(region.height, 0);
+	for (int i = 0; i < region.width; i++)
+	{
+		for (int k = 0; k < region.height; k++)
+		{
+			image_vec[k] = (uchar)image.at<Vec3b>(k + region.y, i + region.x)[1];
+			//cout << image_vec[k] << ",";
+		}
+		//cout << endl;
+		gaussian(3, 2, image_vec, image_result);
+		max_val = 0;
+		for (int j = 0; j < region.height; j++)
+		{
+			if (image_result[j] > max_val)
+			{
+				max_val = image_result[j];
+				max_point.x = i + region.x;
+				max_point.y = j + region.y;
+			}
+		}
+		//cout <<"max value: "<< max_val<<endl;
+		if (max_val >= 120)
+			laser_line.push_back(max_point);
+	}
+}
+
 // ÈÆaxisÖáÐý×ª
 void rotate(const Point3f& axis, double angle, vector<Point3f>& points)
 {
@@ -302,7 +353,7 @@ void reconstruct_test(const char* filepath, const Mat& camera_matrix, const Mat&
 	}
 }
 
-#define FIND_LASER
+//#define FIND_LASER
 void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat& RT,
 	const vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate)
 {
@@ -508,7 +559,10 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	}
 #endif
 
-	for (int i = 0; i < 40; i++)
+	sprintf_s(file, "%s/dist_pose_*.png", filepath);
+	vector<String> image_files;
+	cv::glob(file, image_files);
+	for (int i = 0; i < image_files.size(); i++)
 	{
 #ifdef OUTPUT_PLY
 		{
@@ -535,21 +589,25 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 #endif
 
 		//sprintf_s(file, "%s/test_%03d.png", filepath, 0);
-		sprintf_s(file, "%s/dist_pose_%03d.png", filepath, i);
-		cout << file << endl;
-		image = imread(file);
+		//sprintf_s(file, "%s/dist_pose_%03d.png", filepath, i);
+		cout << image_files[i] << endl;
+		image = imread(image_files[i]);
 #ifdef FIND_LASER
 		image_show = image.clone();
 #endif
 		// find the max value of each line
-		find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
+		//find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
+		Rect region(1511, 1335, 720, 547);
+		find_the_max_point_of_each_column(image, laser_line_point, region);
+		//cout << laser_line_point.size() << endl;
 #ifdef FIND_LASER
 		//cout << laser_line_point.size() << endl;
-		for(auto p: laser_line_point)
-			circle(image_show, p, 2, Scalar(0,0,255));
+		for (auto p : laser_line_point)
+			circle(image_show, p, 4, Scalar(0, 0, 255), 2);
 		resize(image_show, image_show, Size(image_show.cols / 2, image_show.rows / 2));
 		imshow("tmp", image_show);
 		waitKey(0);
+		continue;
 #endif
 
 		coordinate[i].pixel_to_camera(laser_line_point, laser_line_point_in_camera);
@@ -570,5 +628,6 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 			//color.push_back(Point3f(1, 1, 1));
 		}
 	}
-	export_pointcloud_ply("./rabbit/reconstruction.ply", pos, normal, color);
+	sprintf_s(file, "%s/reconstruction.ply", filepath);
+	export_pointcloud_ply(file, pos, normal, color);
 }

@@ -114,9 +114,9 @@ void rename_file(const char path[], const char prifix[])
 
 void laser_points_find_analysis()
 {
-	Mat image = imread("./rabbit/dist_pose_009.png");
+	Mat image = imread("./squirrel/dist_pose_009.png");
 	ofstream outFile;
-	outFile.open("./rabbit/rabbit_009_data.csv");
+	outFile.open("./squirrel/rabbit_009_data.csv");
 	int begin_line = 1738, end_line = begin_line + 10;
 	cout << image.type() <<" " << CV_8UC3 << endl;
 	double tmp;
@@ -131,4 +131,106 @@ void laser_points_find_analysis()
 		outFile << endl;
 	}
 	outFile.close();
+}
+
+// gaussian与求导相关
+float f_x(float x, float miu, float xigma) {
+	return 1 / sqrt(2 * 3.1415 * xigma * xigma)
+		* exp(-(x - miu)*(x - miu) / (2 * xigma * xigma));
+}
+
+void gaussian(const int dim, const int xigma, const vector<float>& value, vector<float>& result) {
+	vector<float> g(dim * 2 + 1);
+	float sum_g = 0;
+	for (int i = 0; i < g.size(); i++) {
+		g[i] = f_x(i - dim, 0, xigma);
+		sum_g += g[i];
+	}
+	for (int i = 0; i < g.size(); i++) {
+		g[i] /= sum_g;
+	}
+	result.resize(value.size(), 0);
+
+	if (g.size() > value.size()) {
+		for (int i = 0; i < value.size(); i++) {
+			float sum_gg = 0;
+			vector<float> gg(value.size());
+			for (int j = 0; j < gg.size(); j++) {
+				if (dim + j - i < 0 || dim + j - i>2 * dim)
+					gg[j] = 0;
+				else
+					gg[j] = g[dim + j - i];
+				sum_gg += gg[j];
+			}
+			for (int j = 0; j < gg.size(); j++) {
+				gg[j] /= sum_gg;
+			}
+
+			float re = 0;
+			for (int j = 0; j < gg.size(); j++) {
+				if (gg[j] != 0)
+					re += value[j] * gg[j];
+			}
+			result[i] = re;
+		}
+		return;
+	}
+
+	for (int i = dim; i < value.size() - dim; i++) {
+		float re = 0;
+		for (int j = 0; j < g.size(); j++) {
+			re += value[i + j - dim] * g[j];
+		}
+		result[i] = re;
+	}
+
+	// 重新计算边缘高斯滤波系数
+	for (int i = 0; i < dim; i++) {
+		float sum_gg = 0;
+		vector<float> gg(g.size());
+		for (int j = 0; j < g.size(); j++) {
+			if (i + j < dim) {
+				gg[j] = 0;
+			}
+			else {
+				gg[j] = g[j];
+			}
+			sum_gg += gg[j];
+		}
+		for (int j = 0; j < gg.size(); j++) {
+			gg[j] /= sum_gg;
+		}
+
+		float re = 0;
+		for (int j = 0; j < gg.size(); j++) {
+			if (gg[j] != 0)
+				re += value[i + j - dim] * gg[j];
+		}
+		result[i] = re;
+	}
+
+	// 重新计算边缘高斯滤波系数
+	for (int i = value.size() - dim; i < value.size(); i++) {
+		float sum_gg = 0;
+		vector<float> gg(g.size());
+		for (int j = 0; j < g.size(); j++) {
+			if (j - ((int)value.size() - 1 - i) > dim) {
+				gg[j] = 0;
+			}
+			else {
+				gg[j] = g[j];
+			}
+			sum_gg += gg[j];
+		}
+		for (int j = 0; j < gg.size(); j++) {
+			gg[j] /= sum_gg;
+		}
+
+		float re = 0;
+		for (int j = 0; j < gg.size(); j++) {
+			if (gg[j] != 0)
+				re += value[i + j - dim] * gg[j];
+		}
+		result[i] = re;
+	}
 }
