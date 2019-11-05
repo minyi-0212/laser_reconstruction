@@ -234,3 +234,41 @@ void gaussian(const int dim, const int xigma, const vector<float>& value, vector
 		result[i] = re;
 	}
 }
+
+// image rotate
+void image_rotate(const Mat& src, Mat& dst, float angle, cv::Mat& rot_mat)
+{
+	// [x', y'] = rot * [x, y, 1].trans()
+	cv::Point2f center(src.cols / 2, src.rows / 2);
+	//cv::Mat rot_mat = cv::getRotationMatrix2D(center, angle, 1); //CV_64F, 2*3
+	rot_mat = cv::getRotationMatrix2D(center, angle, 1); //CV_64F, 2*3
+	cv::Rect bbox = cv::RotatedRect(center, src.size(), angle).boundingRect();
+	// 旋转中心为变换后的图片大小中心
+	rot_mat.at<double>(0, 2) += bbox.width / 2.0 - center.x;
+	rot_mat.at<double>(1, 2) += bbox.height / 2.0 - center.y;
+	cv::warpAffine(src, dst, rot_mat, bbox.size());
+
+	// test re-transform	
+	/*// (0,0)-> 2230.83775639315,0.8434878840091642
+	// (100,100)-> 2223.436334481296, 142.0710310676344
+	cout << rot_mat << endl << endl;
+	cout <<"origin(100,100)-> "<< rot_mat * (Mat_<double>(3, 1) << 100,100, 1) << endl;
+	Mat tmp = Mat::zeros(3, 3, CV_64F);
+	tmp.at<double>(0, 0) = rot_mat.at<double>(0, 0);
+	tmp.at<double>(0, 1) = rot_mat.at<double>(0, 1);
+	tmp.at<double>(0, 2) = rot_mat.at<double>(0, 2);
+	tmp.at<double>(1, 0) = rot_mat.at<double>(1, 0);
+	tmp.at<double>(1, 1) = rot_mat.at<double>(1, 1);
+	tmp.at<double>(1, 2) = rot_mat.at<double>(1, 2);
+	tmp.at<double>(2, 2) = 1;
+	cout <<"matrix: "<< tmp << endl << endl
+		<< "matrix inv: " << tmp.inv() << endl << endl
+		<< (tmp.inv() * (Mat_<double>(3, 1) << 2223.436334481296, 142.0710310676344, 1)) << endl;*/
+
+	
+	/*imwrite("./squirrel/tmp.png", dst);
+	cv::imshow("src", src);
+	resize(dst, dst, Size(), 0.25, 0.25);
+	cv::imshow("dst", dst);
+	cv::waitKey(0);*/
+}

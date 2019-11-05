@@ -1,4 +1,5 @@
 ﻿#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -48,10 +49,18 @@ extern void laser_points_find_analysis();
 
 //#define COMPUTE_LASER_PLANE
 int main(int argc, char *argv[]) {
-	
-	//rename_file("../images", "test_");
+	/*//rename_file("../images", "test_");
 	//laser_points_find_analysis();
-	/*system("pause");
+	Mat src, dst, rotate_mat;
+	char file[_MAX_PATH];
+	for (int i = 0; i < 40; i++)
+	{
+		sprintf_s(file, "./squirrel/dist_pose_%03d.png", i);
+		//sprintf_s(file, "./cube_checkboard/coord_checkboard_%03d.png", i);
+		src = cv::imread(file);
+		image_rotate(src, dst, -59.45, rotate_mat);
+	}
+	system("pause");
 	return 0;*/
 
 	// parser the params of the exe
@@ -188,6 +197,7 @@ int main(int argc, char *argv[]) {
 		}
 		cout << endl << "-------------------------------------------" << endl;
 		//-184.04 311.931 108.288 - 5375.86
+		laser_plane_in_camera = std::vector<double>({ -184.04, 311.931, 108.288, -5375.86 });
 		reconstruct_test2("./squirrel", camera_matrix, RT, laser_plane_in_camera, coordinate);
 	}
 

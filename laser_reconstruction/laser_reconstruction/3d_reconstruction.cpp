@@ -125,6 +125,59 @@ void find_the_max_point_of_each_column(const Mat& image, vector<Point2f>& laser_
 	}
 }
 
+void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line, const cv::Rect& region, float angle)
+{
+	Mat dst, rotate_mat;
+	image_rotate(image, dst, angle, rotate_mat);
+
+	laser_line.clear();
+	double max_val;
+	Point2f max_point;
+	vector<float> image_vec(region.width, 0),
+		image_result(region.width, 0);
+	for (int j = 0; j < region.height; j++)
+	//for (int i = 0; i < region.width; i++)
+	{
+		for (int k = 0; k < region.width; k++)
+		{
+			image_vec[k] = (uchar)dst.at<Vec3b>(j + region.y, k + region.x)[1];
+			//cout << image_vec[k] << ",";
+		}
+		//cout << endl;
+		gaussian(3, 2, image_vec, image_result);
+		max_val = 0;
+		for (int i = 0; i < region.width; i++)
+		//for (int j = 0; j < region.height; j++)
+		{
+			if (image_result[i] > max_val)
+			{
+				max_val = image_result[i];
+				max_point.x = i + region.x;
+				max_point.y = j + region.y;
+			}
+		}
+		//cout <<"max value: "<< max_val<<endl;
+		if (max_val >= 120)
+			laser_line.push_back(max_point);
+	}
+
+	Mat rotate_mat_3x3 = (cv::Mat_<double>(3, 3) <<
+		rotate_mat.at<double>(0, 0), rotate_mat.at<double>(0, 1), rotate_mat.at<double>(0, 2),
+		rotate_mat.at<double>(1, 0), rotate_mat.at<double>(1, 1), rotate_mat.at<double>(1, 2),
+		0, 0, 1), tmp;
+	/*cout << "matrix: " << rotate_mat_3x3 << endl << endl
+		<< "matrix inv: " << rotate_mat_3x3.inv() << endl << endl
+		<<"(100,100)->"<< rotate_mat_3x3 *(Mat_<double>(3, 1) << 100, 100, 1)<<endl << endl
+		<< (rotate_mat_3x3.inv() * (Mat_<double>(3, 1) << 1561.159574239844, 137.8474360587735, 1)) << endl;*/
+	rotate_mat_3x3 = rotate_mat_3x3.inv();
+	for (auto& p : laser_line)
+	{
+		tmp = rotate_mat_3x3 * (Mat_<double>(3, 1) << p.x, p.y, 1);
+		p.x = tmp.at<double>(0, 0);
+		p.y = tmp.at<double>(1, 0);
+	}
+}
+
 // ÈÆaxisÖáÐý×ª
 void rotate(const Point3f& axis, double angle, vector<Point3f>& points)
 {
@@ -362,7 +415,8 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	vector<Point2f> laser_line_point;
 	vector<Point3f> laser_line_point_in_camera, section_point, laser_line_point_in_world,
 		pos, normal, color;
-
+	float angle = atan(laser_plane_in_camera[1]/ laser_plane_in_camera[0]) * 180 / M_PI;
+	cout << angle << endl;
 #ifdef OUTPUT_PLY
 	//check_laser_plane(laser_plane_in_camera, coordinate);
 
@@ -597,14 +651,16 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 #endif
 		// find the max value of each line
 		//find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
-		Rect region(1511, 1335, 720, 547);
-		find_the_max_point_of_each_column(image, laser_line_point, region);
+		/*Rect region(1511, 1335, 720, 547);
+		find_the_max_point_of_each_column(image, laser_line_point, region);*/
+		Rect region(1636, 1876, 1051, 1051);
+		find_the_max_point_of_rotate(image, laser_line_point, region, angle);
 		//cout << laser_line_point.size() << endl;
 #ifdef FIND_LASER
 		//cout << laser_line_point.size() << endl;
 		for (auto p : laser_line_point)
 			circle(image_show, p, 4, Scalar(0, 0, 255), 2);
-		resize(image_show, image_show, Size(image_show.cols / 2, image_show.rows / 2));
+		resize(image_show, image_show, Size(image_show.cols / 4, image_show.rows / 4));
 		imshow("tmp", image_show);
 		waitKey(0);
 		continue;
@@ -628,6 +684,6 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 			//color.push_back(Point3f(1, 1, 1));
 		}
 	}
-	sprintf_s(file, "%s/reconstruction.ply", filepath);
+	sprintf_s(file, "%s/reconstruction_by_rotate.ply", filepath);
 	export_pointcloud_ply(file, pos, normal, color);
 }
