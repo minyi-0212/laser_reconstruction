@@ -81,7 +81,8 @@ vector<double> Ransac::fitPlane()
 {
 	vector<vector<double>> planes;
 	vector<int> counts;
-	double mindist = 0.01;
+	double mindist = 0.001, maxdist=0.001;
+	int cnt = 0;
 	for (int i = 0; i < 1000000; i++)
 	{
 		random_shuffle(Coords.begin(), Coords.end());
@@ -92,6 +93,15 @@ vector<double> Ransac::fitPlane()
 		Point3d p3 = Coords[2];
 		Vec3d p12 = p2 - p1;
 		Vec3d p13 = p3 - p1;
+		p12 = normalize(p12);
+		p13 = normalize(p13);
+		
+		if (abs(p12.dot(p13)) > 0.8) // deg <0.5729бу
+		{
+			//cout << abs(p12.dot(p13)) << endl;
+			cnt++;
+			continue;
+		}
 
 		Vec3d n = p12.cross(p13);
 		double a = n[0];
@@ -128,6 +138,19 @@ vector<double> Ransac::fitPlane()
 			idx = i;
 		}
 	}
-	cout << "maxcount = " << maxcount << endl;
+	double a = planes[idx][0];
+	double b = planes[idx][1];
+	double c = planes[idx][2];
+	double d = planes[idx][3];
+	for (int j = 0; j < Coords.size(); j++)
+	{
+		Point3d coord = Coords[j];
+		double dist = fabs(a * coord.x + b * coord.y + c * coord.z + d) / sqrt(a*a + b * b + c * c);
+		if (dist > maxdist)
+		{
+			maxdist = dist;
+		}
+	}
+	cout <<"miss "<<cnt<<","<< "maxcount = " << maxcount << ", maxdist = " << maxdist << endl;
 	return planes[idx];
 }

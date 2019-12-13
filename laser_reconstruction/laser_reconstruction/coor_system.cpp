@@ -10,6 +10,8 @@ coor_system::coor_system()
 	cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
 	RT = Mat::zeros(4, 4, CV_64FC1);
 	cam_pos = Mat::zeros(4, 1, CV_64FC1);
+	k = 0;
+	b = 0;
 }
 
 coor_system::coor_system(const Mat& cameraM)
@@ -17,6 +19,8 @@ coor_system::coor_system(const Mat& cameraM)
 	cameraMatrix = Mat::zeros(4, 4, CV_64FC1);
 	RT = Mat::zeros(4, 4, CV_64FC1);
 	cam_pos = Mat::zeros(4, 1, CV_64FC1);
+	k = 0;
+	b = 0;
 	init(cameraM);
 }
 
@@ -245,4 +249,70 @@ void coor_system::camera_to_world(const std::vector<cv::Point3f>& p_camera, std:
 		//cout << out_homogeneous.t() << endl << endl;
 		//cout << p_camera[0] << "	->	" << p_pixel[0] << endl;
 	}
+}
+
+void output_mat(std::ofstream& out, const Mat& matrix)
+{
+	for (int j = 0; j < matrix.rows; j++)
+	{
+		for (int i = 0; i < matrix.cols; i++)
+		{
+			out << matrix.at<double>(j, i) << " ";
+		}
+	}
+}
+
+void input_mat(std::ifstream& in, Mat matrix, int row, int col)
+{
+	for (int j = 0; j < matrix.rows; j++)
+	{
+		for (int i = 0; i < matrix.cols; i++)
+		{
+			in >> matrix.at<double>(j, i);
+		}
+	}
+}
+
+void coor_system::output(std::ofstream& out) const
+{
+	/*out << cameraMatrix << endl
+		<< RT << endl
+		<< cam_pos << endl
+		<< rvec << endl
+		<< tvec << endl
+		<< k << " " << b << endl;*/
+	output_mat(out, cameraMatrix);
+	output_mat(out, RT);
+	output_mat(out, cam_pos);
+	out << rvec[0] << " " << rvec[1] << " " << rvec[2] << " "
+		<< tvec[0] << " " << tvec[1] << " " << tvec[2] << " "
+		<< k << " " << b << endl;
+}
+
+void coor_system::input(std::ifstream& in)
+{
+	//in >> cameraMatrix >> RT >> cam_pos >> rvec >> tvec >> k >> b;
+	input_mat(in, cameraMatrix, 4, 4);
+	input_mat(in, RT, 4, 4);
+	input_mat(in, cam_pos, 4, 1);
+	in >> rvec[0] >> rvec[1] >> rvec[2]
+		>> tvec[0] >> tvec[1] >> tvec[2]
+		>> k >> b;
+
+	/*cout << cameraMatrix << endl
+		<< RT << endl
+		<< cam_pos << endl
+		<< rvec << endl
+		<< tvec << endl
+		<< k << " " << b << endl;*/
+}
+
+void coor_system::output() const
+{
+	cout << cameraMatrix << endl
+		<< RT << endl
+		<< cam_pos << endl
+		<< rvec << endl
+		<< tvec << endl
+		<< k << " " << b << endl;
 }

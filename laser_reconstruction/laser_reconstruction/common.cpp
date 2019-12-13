@@ -272,3 +272,51 @@ void image_rotate(const Mat& src, Mat& dst, float angle, cv::Mat& rot_mat)
 	cv::imshow("dst", dst);
 	cv::waitKey(0);*/
 }
+
+#include <iomanip>
+// output coor_system 
+void output_coor_system(const string& filename, const vector<coor_system>& coordinate)
+{
+	ofstream out(filename);
+	out << setprecision(16);
+	out << coordinate.size() << endl;
+	for (int i = 0; i < coordinate.size(); i++)
+	{
+		coordinate[i].output(out);
+	}
+	out << endl;
+	out.close();
+}
+// output laser plane
+void output_laser_plane(const string& filename, const vector<double>& laser_plane_in_camera)
+{
+	ofstream out(filename);
+	out << setprecision(16);
+	for (auto para : laser_plane_in_camera)
+	{
+		out << para << " ";
+	}
+	out.close();
+}
+
+void input_coor_system(const string& filename, vector<coor_system>& coordinate)
+{
+	ifstream in(filename);
+	int size;
+	in >> size;
+	coordinate.resize(size);
+	double tmp;
+	for (int i = 0; i < coordinate.size(); i++)
+	{
+		coordinate[i].input(in);
+	}
+	in.close();
+}
+
+void input_laser_plane(const string& filename, vector<double>& laser_plane_in_camera)
+{
+	ifstream in(filename);
+	laser_plane_in_camera.resize(4);
+	in >> laser_plane_in_camera[0] >> laser_plane_in_camera[1] >> laser_plane_in_camera[2] >> laser_plane_in_camera[3];
+	in.close();
+}

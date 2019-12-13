@@ -125,10 +125,12 @@ void find_the_max_point_of_each_column(const Mat& image, vector<Point2f>& laser_
 	}
 }
 
+#define RED
 void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line, const cv::Rect& region, float angle)
 {
 	Mat dst, rotate_mat;
 	image_rotate(image, dst, angle, rotate_mat);
+	//imwrite("rotate.png", dst);
 
 	laser_line.clear();
 	double max_val;
@@ -140,8 +142,12 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 	{
 		for (int k = 0; k < region.width; k++)
 		{
+#ifndef RED
 			image_vec[k] = (uchar)dst.at<Vec3b>(j + region.y, k + region.x)[1];
 			//cout << image_vec[k] << ",";
+#else
+			image_vec[k] = (uchar)dst.at<Vec3b>(j + region.y, k + region.x)[2];
+#endif
 		}
 		//cout << endl;
 		gaussian(3, 2, image_vec, image_result);
@@ -157,7 +163,7 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 			}
 		}
 		//cout <<"max value: "<< max_val<<endl;
-		if (max_val >= 120)
+		if (max_val >= 200)
 			laser_line.push_back(max_point);
 	}
 
@@ -645,6 +651,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		//sprintf_s(file, "%s/test_%03d.png", filepath, 0);
 		//sprintf_s(file, "%s/dist_pose_%03d.png", filepath, i);
 		cout << image_files[i] << endl;
+		//coordinate[i].output();
 		image = imread(image_files[i]);
 #ifdef FIND_LASER
 		image_show = image.clone();
@@ -653,13 +660,13 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		//find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
 		/*Rect region(1511, 1335, 720, 547);
 		find_the_max_point_of_each_column(image, laser_line_point, region);*/
-		Rect region(1636, 1876, 1051, 1051);
+		Rect region(1169, 1342, 2065, 1937);
 		find_the_max_point_of_rotate(image, laser_line_point, region, angle);
 		//cout << laser_line_point.size() << endl;
 #ifdef FIND_LASER
 		//cout << laser_line_point.size() << endl;
 		for (auto p : laser_line_point)
-			circle(image_show, p, 4, Scalar(0, 0, 255), 2);
+			circle(image_show, p, 4, Scalar(255, 0, 0), 2);
 		resize(image_show, image_show, Size(image_show.cols / 4, image_show.rows / 4));
 		imshow("tmp", image_show);
 		waitKey(0);
@@ -680,7 +687,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		for (int j = 0; j < laser_line_point_in_camera.size(); j++)
 		{
 			pos.push_back(laser_line_point_in_camera[j]);
-			color.push_back(Point3f(i / 40.0, (i % 24) / 24.0, (i % 12) / 12.0));
+			color.push_back(Point3f(i / 800.0, (i % 400) / 400.0, (i % 200) / 200.0));
 			//color.push_back(Point3f(1, 1, 1));
 		}
 	}

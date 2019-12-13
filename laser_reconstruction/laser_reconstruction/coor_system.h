@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include <opencv2/core.hpp>
 
 class coor_system
@@ -29,4 +30,8 @@ public:
 	void pixel_to_camera(const std::vector<cv::Point2f>& p_pixel, std::vector<cv::Point3f>& vec_camera_dir);
 	void camera_to_world(const std::vector<cv::Point3f>& p_camera, std::vector<cv::Point3f>& p_world);
 	// the origin point is campos, in camera system is (0,0,0)
+
+	void output(std::ofstream& out) const;
+	void output() const;
+	void input(std::ifstream& in);
 };

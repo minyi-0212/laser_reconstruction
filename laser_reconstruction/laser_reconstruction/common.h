@@ -1,4 +1,5 @@
 #pragma once
+#include "coor_system.h"
 #include <opencv2/core.hpp>
 #include <vector>
 
@@ -12,3 +13,8 @@ void export_pointcloud_ply(const char *filename,
 void rename_file(const char path[], const char prifix[]);
 void gaussian(const int dim, const int xigma, const std::vector<float>& value, std::vector<float>& result);
 void image_rotate(const cv::Mat& src, cv::Mat& dst, float angle, cv::Mat& rot_mat);
+
+void output_coor_system(const std::string& filename, const std::vector<coor_system>& coordinate);
+void output_laser_plane(const std::string& filename, const std::vector<double>& laser_plane_in_camera);
+void input_coor_system(const std::string& filename, std::vector<coor_system>& coordinate);
+void input_laser_plane(const std::string& filename, std::vector<double>& laser_plane_in_camera);
