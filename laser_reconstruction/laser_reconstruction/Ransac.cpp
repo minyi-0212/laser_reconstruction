@@ -81,7 +81,7 @@ vector<double> Ransac::fitPlane()
 {
 	vector<vector<double>> planes;
 	vector<int> counts;
-	double mindist = 0.001, maxdist=0.001;
+	double mindist = 0.001, maxdist=-1;
 	int cnt = 0;
 	for (int i = 0; i < 1000000; i++)
 	{
@@ -96,7 +96,7 @@ vector<double> Ransac::fitPlane()
 		p12 = normalize(p12);
 		p13 = normalize(p13);
 		
-		if (abs(p12.dot(p13)) > 0.8) // deg <0.5729бу
+		if (abs(p12.dot(p13)) > 0.8) // deg < 36.86бу
 		{
 			//cout << abs(p12.dot(p13)) << endl;
 			cnt++;

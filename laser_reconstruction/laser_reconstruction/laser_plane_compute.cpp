@@ -22,8 +22,8 @@ using namespace cv;
 
 #define M_PI 3.14159265358979323846
 #define output_drawAxis_pix
-//#define MASK_SHOW
-//#define LASER_RED
+#define MASK_SHOW
+#define LASER_RED
 //#define VIRTUAL
 
 static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameters> &params) {
@@ -300,6 +300,9 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	inputImage.copyTo(maskImg, Mask);
 	//Mat undistImg;
 	//undistort(maskImg, undistImg, intrinsic_matrix_loaded, distortion_coeffs_loaded);
+	vector<Mat> channels;
+	split(maskImg, channels);
+	Mat blue = channels[0], green = channels[1], red = channels[2];
 
 #ifdef MASK_SHOW
 	Mat maskShow;
@@ -310,13 +313,38 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	resize(maskShow, maskShow, Size(), 0.25, 0.25);
 	imshow("mask", Mask);
 	imshow("mask_add", maskShow);
+
+	//detect edge
+	{
+		ofstream out("tmp.csv");
+		int i = 2000;
+		//for (int j = 0; j < green.cols; j++)
+		for (int j = 1099; j < 1199; j++)
+		{
+			out << (int)green.at<uchar>(i, j) << endl;
+		}
+		out.close();
+
+		Mat image, gray, dst, abs_dst/*, img_G0, img_G1*/;
+		green.copyTo(image);
+		GaussianBlur(image, image, Size(5, 5), 0, 0, BORDER_DEFAULT);
+		cvtColor(image, gray, CV_GRAY2BGR);
+		/*GaussianBlur(image, img_G0, Size(3, 3), 0);
+		GaussianBlur(img_G0, img_G1, Size(3, 3), 0);
+		Mat img_DoG = img_G0 - img_G1;
+		cvtColor(img_DoG, gray, COLOR_RGB2GRAY);*/
+		Laplacian(gray, dst, CV_32F, 3, 1, 0, BORDER_DEFAULT);
+		convertScaleAbs(dst, abs_dst);
+		abs_dst.convertTo(abs_dst, CV_32F, 1.0 / 255.0);
+		resize(abs_dst, abs_dst, Size(), 0.25, 0.25);
+		imshow("test_edge", abs_dst);
+		resize(green, abs_dst, Size(), 0.25, 0.25);
+		imshow("ee", abs_dst);
+	}
 	//cv::waitKey(0);
 #endif
 
-	vector<Mat> channels;
-	split(maskImg, channels);
-	Mat blue = channels[0], green = channels[1], red = channels[2];
-
+	  
 	//vector<Point> laser;
 	for (int i = 0; i < green.rows; i++)
 	{
@@ -428,6 +456,7 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	cv::line(maskImg, laser_points_in_pixel_coord[0], laser_points_in_pixel_coord[1], Scalar(0, 255, 0), 2);
 	cv::resize(maskImg, maskImg, Size(), 0.25, 0.25);
 	cv::imshow("test_mask", maskImg);
+
 	/*cv::resize(red, red, Size(), 0.25, 0.25);
 	cv::resize(green, green, Size(), 0.25, 0.25);
 	cv::resize(blue, blue, Size(), 0.25, 0.25);
@@ -876,8 +905,8 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 
 	vector<Point3d> laser_points_all_in_camera;
 	int start_index = 0, end_index = image_files.size() - 1;
-	//int start_index = 0, end_index = 250;
-	for (int i = start_index; i <= end_index; i++)
+	//int start_index = 4, end_index = 39;
+	for (int i = start_index; i <= end_index; i+=3)
 	{
 		//if (i % 20 == 0)
 		cout << i << " : " << image_files[i] << endl;

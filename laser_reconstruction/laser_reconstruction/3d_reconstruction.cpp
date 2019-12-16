@@ -155,7 +155,11 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 		for (int i = 0; i < region.width; i++)
 		//for (int j = 0; j < region.height; j++)
 		{
+#ifndef RED
+			if (image_result[i] >= max_val && (uchar)dst.at<Vec3b>(j + region.y, i + region.x)[2] < 200)
+#else
 			if (image_result[i] > max_val)
+#endif
 			{
 				max_val = image_result[i];
 				max_point.x = i + region.x;
@@ -163,7 +167,7 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 			}
 		}
 		//cout <<"max value: "<< max_val<<endl;
-		if (max_val >= 200)
+		if (max_val >= 240)
 			laser_line.push_back(max_point);
 	}
 
@@ -623,6 +627,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	vector<String> image_files;
 	cv::glob(file, image_files);
 	for (int i = 0; i < image_files.size(); i++)
+	//for (int i = 0; i < 1; i++)
 	{
 #ifdef OUTPUT_PLY
 		{
@@ -660,17 +665,18 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		//find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
 		/*Rect region(1511, 1335, 720, 547);
 		find_the_max_point_of_each_column(image, laser_line_point, region);*/
-		Rect region(1169, 1342, 2065, 1937);
+		Rect region (1169, 1342, 2065, 1937);//(1642, 1348, 1609, 1586);
 		find_the_max_point_of_rotate(image, laser_line_point, region, angle);
 		//cout << laser_line_point.size() << endl;
 #ifdef FIND_LASER
 		//cout << laser_line_point.size() << endl;
 		for (auto p : laser_line_point)
-			circle(image_show, p, 4, Scalar(255, 0, 0), 2);
+			circle(image_show, p, 4, Scalar(255, 0, 0), 1);
 		resize(image_show, image_show, Size(image_show.cols / 4, image_show.rows / 4));
 		imshow("tmp", image_show);
+		//imwrite("tmp.png", image_show);
 		waitKey(0);
-		continue;
+		//continue;
 #endif
 
 		coordinate[i].pixel_to_camera(laser_line_point, laser_line_point_in_camera);

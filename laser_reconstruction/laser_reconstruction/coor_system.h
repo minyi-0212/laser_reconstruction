@@ -4,6 +4,7 @@
 
 class coor_system
 {
+public:
 	cv::Mat cameraMatrix, RT, cam_pos;
 	cv::Vec3d rvec, tvec;
 	double k, b;

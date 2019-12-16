@@ -56,7 +56,7 @@ extern void laser_points_find_analysis();
 
 
 #define COMPUTE_LASER_PLANE
-//#define LASER_RED
+#define LASER_RED
 int main(int argc, char *argv[]) {
 	/*//rename_file("../images", "test_");
 	//laser_points_find_analysis();
@@ -112,17 +112,17 @@ int main(int argc, char *argv[]) {
 				<< "distortion coefficients: " << endl << distortion_coeffs_loaded << endl << endl;
 		}
 	}
-	std::string input_file = "F:/800_2/checkboard_1212/red_dist/dist_pose_*.png",
+	std::string input_file = "F:/800_2/dist/laser_1214_select2/dist_pose_*.png",
 #ifndef LASER_RED
-		output_file_path = "F:/800_2/checkboard_1212/green_draw",
+		output_file_path = "F:/800_2/coordinate/laser_1214",
 		output_coor_laser_path = "F:/800_2/checkboard_1212/green_draw",
-		input_coor_laser_file  = "F:/800_2/checkboard_1212",
+		input_coor_laser_file = "F:/800_2/coordinate/checkboardX800_1214",	//"F:/800_2/coordinate/laser_1214",	
 #else
-		output_file_path = "F:/800_2/checkboard_1212/red_draw",
+		output_file_path = "F:/800_2/coordinate/laser_1214",
 		output_coor_laser_path = "F:/800_2/checkboard_1212/red_draw",
-		input_coor_laser_file  = "F:/800_2/checkboard_1212",
+		input_coor_laser_file  = "F:/800_2/coordinate/checkboardX800_1214",
 #endif
-		reconstruction_file_path = "F:/800_2/cup_1213_dist";
+		reconstruction_file_path = "F:/800_2/dist/cupX800_1214";			//"F:/800_2/dist/cupX40_1214";
 #ifdef COMPUTE_LASER_PLANE
 	//test_aruco(intrinsic_matrix_loaded);
 
@@ -138,30 +138,36 @@ int main(int argc, char *argv[]) {
 	std::vector<coor_system> coordinate;
 
 #if 1
-	input_file = parser.get<string>("input_file");
-	output_file_path = parser.get<string>("output_file");
+	/*input_file = parser.get<string>("input_file");
+	output_file_path = parser.get<string>("output_file");*/
 	cout << "input file : " << input_file << endl
 		<< "output path : " << output_file_path << endl << endl;
 	compute_laser_plane_test(parser, input_file.c_str(), output_file_path,
 		camera_matrix, distortion_coeffs_loaded,
 		laser_plane_in_camera, coordinate);
-	//output_coor_system(output_coor_laser_path + "/coordinate.txt", coordinate);
-	output_laser_plane(output_file_path + "/laser_plane.txt", laser_plane_in_camera);
+	//output_coor_system(output_file_path + "/coordinate.txt", coordinate);
+	output_laser_plane(output_file_path + "/red_laser_plane2.txt", laser_plane_in_camera);
 #else
-	/*input_file = parser.get<string>("input_file");
+	input_file = parser.get<string>("input_file");
+	//input_coor_laser_file = parser.get<string>("laser_file");
 	output_file_path = parser.get<string>("output_file");
-	input_coor_laser_file = parser.get<string>("laser_file");*/
 	//input_file = "F:/800_2/checkboard2X800_laser_green_12102/result_*.png";
 	cout << "input file : " << input_file << endl
-		<< "input_coor_laser_file : " << output_coor_laser_path << endl
+		//<< "input_coor_laser_file : " << input_coor_laser_file << endl
 		<< "output path : " << output_file_path << endl<< endl;
 
-	input_coor_system(input_coor_laser_file + "/coordinate.txt", coordinate);
-	input_laser_plane(input_coor_laser_file + "/green_laser_plane1.txt", laser_plane_in_camera);
+	input_coor_system(output_file_path + "/coordinate.txt", coordinate);
+	input_laser_plane(output_file_path + "/laser_plane.txt", laser_plane_in_camera);
 	cout << "laser: ";
 	for(auto l: laser_plane_in_camera)
 		cout << l << ", ";
 	cout << endl;
+	
+	//for (int i = 0; i < 7; i++)
+	//	cout << coordinate[i+1].RT.inv() * coordinate[i].RT - coordinate[i+2].RT.inv() * coordinate[i+1].RT << endl;
+	//	//cout << coordinate[i].RT.inv() * coordinate[i + 1].RT - coordinate[i + 1].RT.inv()*coordinate[i + 2].RT << endl;
+	//cout << coordinate[799].RT.inv() * coordinate[0].RT - coordinate[0].RT.inv()*coordinate[1].RT << endl;
+	
 	draw_laser_in_images(input_file.c_str(), output_file_path, laser_plane_in_camera, coordinate);
 #endif
 #endif
@@ -240,7 +246,7 @@ int main(int argc, char *argv[]) {
 		cout << "input path : " << reconstruction_file_path << endl
 			<< "input_coor_laser_file : " << input_coor_laser_file << endl << endl;
 		input_coor_system(input_coor_laser_file + "/coordinate.txt", coordinate);
-		input_laser_plane(input_coor_laser_file + "/red_laser_plane1.txt", laser_plane_in_camera);
+		input_laser_plane(input_coor_laser_file + "/red_laser_plane2.txt", laser_plane_in_camera);
 		cout << "laser: ";
 		for (auto l : laser_plane_in_camera)
 			cout << l << ", ";

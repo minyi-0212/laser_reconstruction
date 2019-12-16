@@ -284,7 +284,6 @@ void output_coor_system(const string& filename, const vector<coor_system>& coord
 	{
 		coordinate[i].output(out);
 	}
-	out << endl;
 	out.close();
 }
 // output laser plane
