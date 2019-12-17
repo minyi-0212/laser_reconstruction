@@ -125,7 +125,7 @@ void find_the_max_point_of_each_column(const Mat& image, vector<Point2f>& laser_
 	}
 }
 
-#define RED
+//#define RED
 void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line, const cv::Rect& region, float angle)
 {
 	Mat dst, rotate_mat;

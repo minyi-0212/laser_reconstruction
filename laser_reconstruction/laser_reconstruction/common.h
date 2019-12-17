@@ -18,3 +18,8 @@ void output_coor_system(const std::string& filename, const std::vector<coor_syst
 void output_laser_plane(const std::string& filename, const std::vector<double>& laser_plane_in_camera);
 void input_coor_system(const std::string& filename, std::vector<coor_system>& coordinate);
 void input_laser_plane(const std::string& filename, std::vector<double>& laser_plane_in_camera);
+
+void fitPlane_least_square(std::vector<cv::Point3d>& points, std::vector<double>& plane);
+void fitPlane_svd(std::vector<cv::Point3d>& points, std::vector<double>& plane);
+
+void gaussian_with_mask(const int dim, const int xigma, const cv::Mat& mask, cv::Mat& image);
