@@ -22,8 +22,8 @@ using namespace cv;
 
 #define M_PI 3.14159265358979323846
 #define output_drawAxis_pix
-#define MASK_SHOW
-//#define LASER_RED
+//#define MASK_SHOW
+#define LASER_RED
 //#define VIRTUAL
 
 static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameters> &params) {
@@ -300,10 +300,19 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	inputImage.copyTo(maskImg, Mask);
 	//Mat undistImg;
 	//undistort(maskImg, undistImg, intrinsic_matrix_loaded, distortion_coeffs_loaded);
-	gaussian_with_mask(6, 4, Mask, maskImg);
+	//gaussian_with_mask(11, 8, Mask, maskImg);
+	GaussianBlur(maskImg, maskImg, Size(5, 5), 2, 2);
 	vector<Mat> channels;
 	split(maskImg, channels);
-	Mat blue = channels[0], green = channels[1], red = channels[2];
+	/*Mat blue = channels[0], green = channels[1], red = channels[2];*/
+	int bgr = 1;
+	vector<float> range(3, 0);
+#ifdef LASER_RED
+	bgr = 1;
+	find_range(maskImg, range, 0.9, 100);
+#else
+	find_range(maskImg, range, 0.9, 200);
+#endif
 
 #ifdef MASK_SHOW
 	Mat maskShow, tmp;
@@ -324,22 +333,22 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 
 	//detect edge
 	{
-		//ofstream out("tmp.csv");
-		//int i = 2800;
-		//cout << green.cols << endl;
-		////for (int i = 0; i < 3000; i+=100)
-		//{
-		//	//for (int j = 0; j < green.cols; j++)
-		//	for (int j = 2000; j < 2283; j++)
-		//	{
-		//		//out << (int)green.at<uchar>(i, j) << ",";
-		//		out << (int)maskImg.at<Vec3b>(i, j)[1] << "," << (int)green.at<uchar>(i, j) << endl;
-		//	}
-		//}
-		//out.close();
+		/*ofstream out("tmp.csv");
+		int i = 2800;
+		cout << green.cols << endl;
+		//for (int i = 0; i < 3000; i+=100)
+		{
+			//for (int j = 0; j < green.cols; j++)
+			for (int j = 2000; j < 2283; j++)
+			{
+				//out << (int)green.at<uchar>(i, j) << ",";
+				out << (int)maskImg.at<Vec3b>(i, j)[1] << "," << (int)green.at<uchar>(i, j) << endl;
+			}
+		}
+		out.close();*/
 
 		Mat image, gray, dst, abs_dst/*, img_G0, img_G1*/;
-		green.copyTo(image);
+		channels[bgr].copyTo(image);
 		GaussianBlur(image, image, Size(5, 5), 0, 0, BORDER_DEFAULT);
 		cvtColor(image, gray, CV_GRAY2BGR);
 		/*GaussianBlur(image, img_G0, Size(3, 3), 0);
@@ -358,6 +367,7 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 #endif
 
 	//vector<Point> laser;
+#ifndef LASER_RED
 	for (int i = 0; i < green.rows; i++)
 	{
 		/*uchar val = 0;
@@ -374,8 +384,7 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 		{
 			laser.push_back(Point2f(maxj, i));
 		}*/
-#ifndef LASER_RED
-		uchar green_val = 0;
+		/*uchar green_val = 0;
 		int maxj = 0, tmp=-1;
 		for (int j = 0; j < green.cols; j++)
 		{
@@ -396,43 +405,129 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 		//if (green_val >= 230 && red.at<uchar>(i, maxj) < 200)
 		if ((green_val >= 250 && red.at<uchar>(i, maxj) < 230)
 			|| (green_val < 250 && green_val >= 150 && red.at<uchar>(i, maxj) < 100))
+		//if (green_val >= range[1])
 		{
 			laser.push_back(Point2f(maxj, i));
-		}
-#endif
-#ifdef LASER_RED
-		uchar red_val = 0;
-		int maxj = 0, tmp = -1;
-		vector<float> image_vec(red.cols, 0),
-			image_result(red.cols, 0);
-		for (int k = 0; k < red.cols; k++)
+		}*/
+		uchar green_val = 0;
+		int maxj = 0, tmp = 0;
+		for (int j = 0; j < green.cols; j++)
 		{
-			image_vec[k] = (uchar)red.at<uchar>(i, k);
-		}
-		gaussian(3, 2, image_vec, image_result);
-		for (int j = 0; j < red.cols; j++)
-		{
-			//if (red.at<uchar>(i, j) > red_val /*&& red.at<uchar>(i, j) > green.at<uchar>(i, j)*/)
-			if (image_result[j] > red_val && red.at<uchar>(i, j) > blue.at<uchar>(i, j))
+			if (green.at<uchar>(i, j) > green_val && green.at<uchar>(i, j) > red.at<uchar>(i, j))
 			{
-				red_val = red.at<uchar>(i, j);
+				green_val = green.at<uchar>(i, j);
 				maxj = j;
 			}
-			else if (red_val == 255 && red.at<uchar>(i, j) == red_val)
+			else if (green_val == 255 && green.at<uchar>(i, j) == green_val)
 			{
 				tmp = j;
 			}
 		}
-		if (tmp > maxj && maxj + 50 > tmp)
+		if (tmp > maxj && maxj + 100 > tmp)
 			maxj = (tmp + maxj) / 2;
-		else
+		else if (tmp != 0)
 			continue;
-		if (red_val >= 250 && green.at<uchar>(i, maxj) > 230 /*&& blue.at<uchar>(i, maxj) < 200*/)
+		if (green_val >= range[1])
 		{
 			laser.push_back(Point2f(maxj, i));
 		}
-#endif
 	}
+#endif
+#ifdef LASER_RED
+	//uchar red_val = 0;
+	//int maxj = 0, tmp = -1;
+	//vector<float> image_vec(red.cols, 0),
+	//	image_result(red.cols, 0);
+	//for (int k = 0; k < red.cols; k++)
+	//{
+	//	image_vec[k] = (uchar)red.at<uchar>(i, k);
+	//}
+	//gaussian(3, 2, image_vec, image_result);
+	//for (int j = 0; j < red.cols; j++)
+	//{
+	//	//if (red.at<uchar>(i, j) > red_val /*&& red.at<uchar>(i, j) > green.at<uchar>(i, j)*/)
+	//	if (image_result[j] > red_val && red.at<uchar>(i, j) > blue.at<uchar>(i, j))
+	//	{
+	//		red_val = red.at<uchar>(i, j);
+	//		maxj = j;
+	//	}
+	//	else if (red_val == 255 && red.at<uchar>(i, j) == red_val)
+	//	{
+	//		tmp = j;
+	//	}
+	//}
+	//if (tmp > maxj && maxj + 50 > tmp)
+	//	maxj = (tmp + maxj) / 2;
+	//else
+	//	continue;
+	//if (red_val >= 250 && green.at<uchar>(i, maxj) > 230 /*&& blue.at<uchar>(i, maxj) < 200*/)
+	//{
+	//	laser.push_back(Point2f(maxj, i));
+	//}
+
+	/*uchar red_val = 0;
+	int maxj = 0, tmp = 0;
+	for (int j = 0; j < red.cols; j++)
+	{
+		if (red.at<uchar>(i, j) > red_val && red.at<uchar>(i, j) > green.at<uchar>(i, j))
+		{
+			red_val = red.at<uchar>(i, j);
+			maxj = j;
+		}
+		else if (red_val == 255 && red.at<uchar>(i, j) == red_val)
+		{
+			tmp = j;
+		}
+	}
+	if (tmp > maxj && maxj + 100 > tmp)
+		maxj = (tmp + maxj) / 2;
+	else if (tmp != 0)
+		continue;
+	if (red_val >= range[2])
+	{
+		laser.push_back(Point2f(maxj, i));
+	}*/
+	double max_val;
+	Point2f max_point;
+	int index = -1, width = -1, max_width = -1;
+	for (int j = 0; j < channels[bgr].rows; j++)
+	{
+		max_val = -1, index = -1, width = 0, max_width = 0;
+		max_point.y = j;
+		for (int i = 0; i < channels[bgr].cols; i++)
+		{
+			/*if (max_val < range[1] && (uchar)dst.at<Vec3b>(j, i)[1] > max_val)
+			{
+				max_val = dst.at<Vec3b>(j, i)[1];
+				max_point.x = i;
+			}*/
+			if ((uchar)channels[bgr].at<uchar>(j, i) > max_val)
+			{
+				max_val = channels[bgr].at<uchar>(j, i);
+				index = i;
+				width = 1;
+				max_width = 1;
+			}
+			else if ((uchar)channels[bgr].at<uchar>(j, i) == max_val)
+			{
+				width++;
+			}
+			else
+			{
+				if (width > max_width || max_val > (uchar)channels[bgr].at<uchar>(max_point.y, max_point.x))
+				{
+					max_width = width;
+					max_point.x = (int)index + (max_width - 1) / 2;
+					//cout << max_point.x << "=" << index << "+" << max_width << endl;
+				}
+				width = 0;
+				index = i + 1;
+			}
+		}
+		if (max_val >= range[bgr])
+			laser.push_back(max_point);
+	}
+#endif
 
 	Vec4f line;
 	if (laser.size() <= 2)
@@ -459,7 +554,6 @@ void compute_laser_line(const Mat& inputImage, const vector<Point2f>& mask_point
 	{
 		circle(maskImg, p, 2, Scalar(255, 0, 0), 5);
 	}
-	cv::imwrite("tmp.png", maskImg);
 
 	vector<Point2d> laser_points_in_pixel_coord;
 	laser_points_in_pixel_coord.push_back(Point2d((100 - b) / k, 100));
@@ -840,7 +934,7 @@ void draw_laser_in_images(const char filepath[], const string& output_path,
 				}
 			}*/
 
-		line(image, section_point_pixel[0], section_point_pixel[section_point_pixel.size() - 1], Scalar(255, 0, 0), 3);
+		line(image, section_point_pixel[0], section_point_pixel[section_point_pixel.size() - 1], Scalar(255, 0, 0), 1);
 		//line(image, section_point_pixel[3], section_point_pixel[4], Scalar(255, 0, 0), 3);
 		char out_file_path[_MAX_PATH];
 		sprintf_s(out_file_path, "%s/result_%03d.png", output_dir, atoi(
@@ -916,11 +1010,14 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 	}
 
 	vector<Point3d> laser_points_all_in_camera;
-	int start_index = 0, end_index = image_files.size() - 1;
-	//int start_index = 4, end_index = 39;
+	//int start_index = 0, end_index = image_files.size() - 1;
+	int start_index = 0, end_index = 25;
 	for (int i = start_index; i <= end_index; i++)
 	{
-		//if (i % 20 == 0)
+		//if ((i >= 2 && i <= 18)||(i >= 48 && i <= 53))
+		//if ((i >= 12 && i <= 15) || (i >= 26 && i <= 31))
+		/*if ((i >= 0 && i <= 40) || (i >= 26 && i <= 31))
+			continue;*/
 		cout << i << " : " << image_files[i] << endl;
 
 		Mat inputImage, imageCopy;
@@ -969,7 +1066,7 @@ void compute_laser_plane_test(const cv::CommandLineParser& parser, const char fi
 #ifndef VIRTUAL
 			compute_laser_line(inputImage, mask_in_pixel, laser_points_in_pixel, laser_points_all_in_camera, coordinate[i]);
 #ifdef output_drawAxis_pix
-		cv::line(imageCopy, coordinate[i].get_laser_line_point(100), coordinate[i].get_laser_line_point(4000), Scalar(0, 255, 0), 2);
+		cv::line(imageCopy, coordinate[i].get_laser_line_point(100), coordinate[i].get_laser_line_point(4000), Scalar(255, 0, 0), 2);
 		sprintf_s(out_file_path, "%s/coord_checkboard_%03d.png", output_dir, i);
 		imwrite(out_file_path, imageCopy);
 #endif

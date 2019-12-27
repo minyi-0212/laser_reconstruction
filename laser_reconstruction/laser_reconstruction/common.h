@@ -23,3 +23,5 @@ void fitPlane_least_square(std::vector<cv::Point3d>& points, std::vector<double>
 void fitPlane_svd(std::vector<cv::Point3d>& points, std::vector<double>& plane);
 
 void gaussian_with_mask(const int dim, const int xigma, const cv::Mat& mask, cv::Mat& image);
+
+void find_range(const cv::Mat& image, std::vector<float>& range, float percent = 0.9, int max_value = 150);

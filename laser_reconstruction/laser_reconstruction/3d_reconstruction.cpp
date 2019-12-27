@@ -125,7 +125,8 @@ void find_the_max_point_of_each_column(const Mat& image, vector<Point2f>& laser_
 	}
 }
 
-//#define RED
+#define RED
+//#define FIND_LASER
 void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line, const cv::Rect& region, float angle)
 {
 	Mat dst, rotate_mat;
@@ -136,7 +137,9 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 	double max_val;
 	Point2f max_point;
 	vector<float> image_vec(region.width, 0),
-		image_result(region.width, 0);
+		image_result(region.width, 0),
+		range(3, 0);
+	find_range(dst, range, 0.6, 50);
 	for (int j = 0; j < region.height; j++)
 	//for (int i = 0; i < region.width; i++)
 	{
@@ -167,9 +170,170 @@ void find_the_max_point_of_rotate(const Mat& image, vector<Point2f>& laser_line,
 			}
 		}
 		//cout <<"max value: "<< max_val<<endl;
-		if (max_val >= 240)
+		if (max_val >= range[1])
 			laser_line.push_back(max_point);
 	}
+
+	Mat rotate_mat_3x3 = (cv::Mat_<double>(3, 3) <<
+		rotate_mat.at<double>(0, 0), rotate_mat.at<double>(0, 1), rotate_mat.at<double>(0, 2),
+		rotate_mat.at<double>(1, 0), rotate_mat.at<double>(1, 1), rotate_mat.at<double>(1, 2),
+		0, 0, 1), tmp;
+	/*cout << "matrix: " << rotate_mat_3x3 << endl << endl
+		<< "matrix inv: " << rotate_mat_3x3.inv() << endl << endl
+		<<"(100,100)->"<< rotate_mat_3x3 *(Mat_<double>(3, 1) << 100, 100, 1)<<endl << endl
+		<< (rotate_mat_3x3.inv() * (Mat_<double>(3, 1) << 1561.159574239844, 137.8474360587735, 1)) << endl;*/
+	rotate_mat_3x3 = rotate_mat_3x3.inv();
+	for (auto& p : laser_line)
+	{
+		tmp = rotate_mat_3x3 * (Mat_<double>(3, 1) << p.x, p.y, 1);
+		p.x = tmp.at<double>(0, 0);
+		p.y = tmp.at<double>(1, 0);
+	}
+}
+
+void find_the_max_point_of_rotate_with_mask(const Mat& image, const Mat& mask,
+	vector<Point2f>& laser_line, float angle)
+{
+	Mat dst, rotate_mat, t;
+	vector<Mat> mask_channel;
+	split(mask, mask_channel);
+
+	/*Mat mask_all;
+	mask_all.create(image.size(), CV_8UC1);
+	mask_all.setTo(255);
+	image.copyTo(dst);
+	//gaussian_with_mask(6, 4, mask_channel[0], dst);
+	gaussian_with_mask(6, 4, mask_all, dst);*/
+	image.copyTo(dst);
+	//GaussianBlur(dst, dst, Size(21, 21), 14, 14);
+	GaussianBlur(dst, dst, Size(21, 21), 7, 14);
+	//imwrite("rotate.png", dst);
+	image_rotate(dst, t, angle, rotate_mat);
+	t.copyTo(dst, mask);
+
+	laser_line.clear();
+	double max_val;
+	Point2f max_point;
+	vector<float> range(3, 0);
+	int bgr = 1;
+#ifdef RED
+	bgr = 2;
+#endif 
+#ifndef RED
+	find_range(dst, range, 0.45, 0);
+#else
+	find_range(dst, range, 0.3, 50);
+	//find_range(dst, range, 0.3, 50);
+#endif
+	/*for (int j = 0; j < dst.rows; j++)
+	{
+		max_val = 0;
+		max_point.y = j;
+		int index_end = -1;
+		for (int i = 0; i < dst.cols; i++)
+		{
+			if (max_val == (uchar)dst.at<Vec3b>(j, i)[1]
+				&& max_val == (uchar)dst.at<Vec3b>(j, i - 1)[1]
+				&& max_val == (uchar)dst.at<Vec3b>(j, i + 1)[1]
+				&& max_val == (uchar)dst.at<Vec3b>(j, i + 2)[1])
+			{
+				index_end = i;
+			}
+			else if ((uchar)dst.at<Vec3b>(j, i)[1] > max_val)
+			{
+				max_val = dst.at<Vec3b>(j, i)[1];
+				max_point.x = i;
+			}
+	}
+		if (index_end > max_point.x 
+			&& (uchar)dst.at<Vec3b>(j, index_end)[1] == max_val
+			&& index_end < max_point.x+250)
+		{
+			cout <<j<<"["<< max_val <<"]: "<< max_point.x << "," << index_end << "=" << (max_point.x + index_end) / 2 << endl;
+			max_point.x = (max_point.x + index_end) / 2;
+		}
+		if (max_val >= range[1])
+			laser_line.push_back(max_point);
+	}*/
+	int index = -1, width = -1, max_width = -1;
+	for (int j = 0; j < dst.rows; j++)
+	{
+		max_val = -1, index = -1, width = 0, max_width = 0;
+		max_point.y = j;
+		for (int i = 0; i < dst.cols; i++)
+		{
+			/*if (max_val < range[bgr] && (uchar)dst.at<Vec3b>(j, i)[bgr] > max_val)
+			{
+				max_val = dst.at<Vec3b>(j, i)[bgr];
+				max_point.x = i;
+			}*/
+			if ((uchar)dst.at<Vec3b>(j, i)[bgr] > max_val)
+			{
+				max_val = dst.at<Vec3b>(j, i)[bgr];
+				index = i;
+				width = 1;
+				max_width = 1;
+			}
+			else if ((uchar)dst.at<Vec3b>(j, i)[bgr] == max_val)
+			{
+				width++;
+			}
+			else
+			{
+				if (width > max_width || max_val> (uchar)dst.at<Vec3b>(max_point.y, max_point.x)[bgr])
+				{
+					max_width = width;
+					max_point.x = (int)index + (max_width-1) / 2;
+					//cout << max_point.x << "=" << index << "+" << max_width << endl;
+				}
+				width = 0;
+				index = i+1;
+			}
+		}
+		if (max_val >= range[bgr])
+			laser_line.push_back(max_point);
+	}
+
+#ifdef FIND_LASER
+	{
+		Mat tmp;
+		dst.copyTo(tmp);
+		for (auto& p : laser_line)
+		{
+#ifndef RED
+			//circle(tmp, p, 3, Scalar(0, 0, 255), 3);
+			tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[0] = 0;
+			tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[1] = 0;
+			tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[2] = 255;
+#else
+			circle(tmp, p, 3, Scalar(255, 255, 0), 3);
+			/*tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[0] = 0;
+			tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[1] = 0;
+			tmp.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[2] = 255;*/
+#endif
+		}
+		
+		ofstream out("./tmp/tmp.csv");
+		for (int a = 2500; a < 2600; a++)
+		{
+			for (int b = 2500; b < 2800; b++)
+			{
+				out << (int)tmp.at<Vec3b>(a, b)[bgr] << ",";
+			}
+			out << endl;
+		}
+		out.close();
+
+		imwrite("./tmp/rotate_tmp.png", tmp);
+		resize(tmp, tmp, Size(tmp.cols / 4, tmp.rows / 4));
+		imshow("dst", tmp);
+
+		mask_channel[0].copyTo(tmp);
+		resize(tmp, tmp, Size(tmp.cols / 4, tmp.rows / 4));
+		imshow("mask", tmp);
+		/*waitKey(0);*/
+	}
+#endif
 
 	Mat rotate_mat_3x3 = (cv::Mat_<double>(3, 3) <<
 		rotate_mat.at<double>(0, 0), rotate_mat.at<double>(0, 1), rotate_mat.at<double>(0, 2),
@@ -416,7 +580,6 @@ void reconstruct_test(const char* filepath, const Mat& camera_matrix, const Mat&
 	}
 }
 
-//#define FIND_LASER
 void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat& RT,
 	const vector<double>& laser_plane_in_camera, vector<coor_system>& coordinate)
 {
@@ -426,7 +589,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	vector<Point3f> laser_line_point_in_camera, section_point, laser_line_point_in_world,
 		pos, normal, color;
 	float angle = atan(laser_plane_in_camera[1]/ laser_plane_in_camera[0]) * 180 / M_PI;
-	cout << angle << endl;
+	cout <<"rotate angle: "<< angle << endl;
 #ifdef OUTPUT_PLY
 	//check_laser_plane(laser_plane_in_camera, coordinate);
 
@@ -460,7 +623,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 				color.push_back(Point3f(0, 0, 1));
 			}
 		}
-		export_pointcloud_ply("./output_virtual/camera_coord_big.ply", pos, normal, color);
+		export_pointcloud_ply("./camera_coord_big.ply", pos, normal, color);
 		return;
 #endif
 #ifdef checkboard
@@ -517,7 +680,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 				color.push_back(Point3f(0, 0, 1));
 			}
 		}
-		export_pointcloud_ply("./output_virtual/real_world_coord.ply", pos, normal, color);
+		export_pointcloud_ply("./real_world_coord.ply", pos, normal, color);
 		return;
 #endif
 
@@ -584,7 +747,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 				color.push_back(Point3f(1, 0, 1));
 			}
 		}
-		export_pointcloud_ply("./output_virtual/laser_plane_compute.ply", pos, normal, color);
+		export_pointcloud_ply("./laser_plane_compute.ply", pos, normal, color);
 		return;
 #endif
 
@@ -626,8 +789,11 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 	sprintf_s(file, "%s/dist_pose_*.png", filepath);
 	vector<String> image_files;
 	cv::glob(file, image_files);
+
+	sprintf_s(file, "%s/mask.png", filepath);
+	Mat mask = imread(file);
 	for (int i = 0; i < image_files.size(); i++)
-	//for (int i = 0; i < 1; i++)
+	//for (int i = 320; i < 321; i++)
 	{
 #ifdef OUTPUT_PLY
 		{
@@ -665,16 +831,23 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		//find_the_max_point_of_each_line(image, laser_line_point);					// need to fix to the real!!!
 		/*Rect region(1511, 1335, 720, 547);
 		find_the_max_point_of_each_column(image, laser_line_point, region);*/
-		Rect region (1169, 1342, 2065, 1937);//(1642, 1348, 1609, 1586);
-		find_the_max_point_of_rotate(image, laser_line_point, region, angle);
+		//Rect region (1169, 1342, 2065, 1937);//(1642, 1348, 1609, 1586);
+		//find_the_max_point_of_rotate(image, laser_line_point, region, angle);
+		find_the_max_point_of_rotate_with_mask(image, mask, laser_line_point, angle);
 		//cout << laser_line_point.size() << endl;
 #ifdef FIND_LASER
 		//cout << laser_line_point.size() << endl;
 		for (auto p : laser_line_point)
-			circle(image_show, p, 4, Scalar(255, 0, 0), 1);
+		{
+			//circle(image_show, p, 1, Scalar(255, 0, 255), 1);
+			image_show.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[0] = 255;
+			image_show.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[1] = 0;
+			image_show.at<Vec3b>((int)(p.y + 0.5), (int)(p.x + 0.5))[2] = 255;
+		}
+		sprintf_s(file, "./tmp/tmp_%d.png", i);
+		imwrite(file, image_show);
 		resize(image_show, image_show, Size(image_show.cols / 4, image_show.rows / 4));
 		imshow("tmp", image_show);
-		//imwrite("tmp.png", image_show);
 		waitKey(0);
 		//continue;
 #endif
@@ -694,7 +867,7 @@ void reconstruct_test2(const char* filepath, const Mat& camera_matrix, const Mat
 		{
 			pos.push_back(laser_line_point_in_camera[j]);
 			color.push_back(Point3f(i / 800.0, (i % 400) / 400.0, (i % 200) / 200.0));
-			//color.push_back(Point3f(1, 1, 1));
+			//color.push_back(Point3f(0, 0, 1));
 		}
 	}
 	sprintf_s(file, "%s/reconstruction_by_rotate.ply", filepath);

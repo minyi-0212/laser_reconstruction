@@ -363,8 +363,9 @@ void fitPlane_least_square(vector<Point3d>& points, vector<double>& plane)
 	plane.resize(4);
 	plane[0] = res[0];
 	plane[1] = res[1];
-	plane[2] = 1;
+	plane[2] = -1;
 	plane[3] = res[2];
+	cout <<"dist: "<< plane[3] / sqrt(plane[0] * plane[0] + plane[1] * plane[1] + plane[2] * plane[2]) << endl;
 }
 
 void fitPlane_svd(vector<Point3d>& points, vector<double>& plane)
@@ -464,4 +465,37 @@ void gaussian_with_mask(const int dim, const int xigma, const Mat& mask, Mat& im
 			image.at<Vec3b>(j, i)[2] = sum[2];
 		}
 	}
+}
+
+void find_range(const Mat& image, vector<float>& range, float percent, int max_value)
+{
+	range.resize(3, 0);
+	int m = 0;
+	for (int bgr = 0; bgr < 3; bgr++)
+	{
+		vector<int> max_of_eacj_line;
+		for (int j = 0; j < image.rows; j++)
+		{
+			m = 0;
+			for (int i = 0; i < image.cols; i++)
+			{
+				if ((int)image.at<Vec3b>(j, i)[bgr] > m)
+					m = image.at<Vec3b>(j, i)[bgr];
+			}
+			if (m > 0)
+				max_of_eacj_line.push_back(m);
+		}
+		sort(max_of_eacj_line.begin(), max_of_eacj_line.end());
+		//cout << max_of_eacj_line[max_of_eacj_line.size()-1] << endl;
+		range[bgr] = max(max_of_eacj_line[max_of_eacj_line.size() * percent], max_value);
+	}
+	cout << range[0] << " " << range[1] << " " << range[2] << endl;
+	/*{
+		ofstream out("max_value.csv");
+		for (int j = 0; j < image.rows; j++)
+		{
+			out << max_of_eacj_line[j] << endl;
+		}
+		out.close();
+	}*/
 }
